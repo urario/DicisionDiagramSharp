@@ -57,6 +57,18 @@ line2
         Assert.AreEqual(expected, actual);
     }
 
+    [TestMethod]
+    public void Exporters_FormatBddTruthTableModel()
+    {
+        var manager = new BddManager();
+        var a = manager.GetOrAddVariable("A");
+        var table = DecisionDiagramSharp.Diagnostics.BddDiagnostics.BuildTruthTable(manager, manager.Var(a));
+
+        StringAssert.Contains(CsvTableExporter.Export(table), "A,Result");
+        StringAssert.Contains(MarkdownTableExporter.Export(table), "| A | Result |");
+        StringAssert.Contains(AsciiDocTableExporter.Export(table), "|A");
+    }
+
     private static TableModel CreateTable()
     {
         return new TableModel(

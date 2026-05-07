@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using DecisionDiagramSharp;
+using DecisionDiagramSharp.Diagnostics;
 
-BenchmarkRunner.Run<ZddBenchmarks>();
+BenchmarkSwitcher.FromAssembly(typeof(ZddBenchmarks).Assembly).Run(args);
 
 [MemoryDiagnoser]
 public class ZddBenchmarks
@@ -97,5 +98,53 @@ public class ZddBenchmarks
         }
 
         return sets;
+    }
+}
+
+[MemoryDiagnoser]
+public class BddBenchmarks
+{
+    private BddManager _manager = new BddManager();
+    private Bdd _featureRule;
+
+    /// <summary>
+    /// Prepares reusable BDD benchmark input.
+    /// </summary>
+    [GlobalSetup]
+    public void Setup()
+    {
+        _manager = new BddManager();
+        var variables = new VariableId[12];
+        for (var i = 0; i < variables.Length; i++)
+        {
+            variables[i] = _manager.GetOrAddVariable("F" + i);
+        }
+
+        _featureRule = _manager.False;
+        for (var i = 0; i < variables.Length - 1; i++)
+        {
+            var pair = _manager.And(_manager.Var(variables[i]), _manager.Not(_manager.Var(variables[i + 1])));
+            _featureRule = _manager.Or(_featureRule, pair);
+        }
+    }
+
+    /// <summary>
+    /// Measures BDD ITE throughput.
+    /// </summary>
+    [Benchmark]
+    public long Ite()
+    {
+        var result = _manager.Ite(_featureRule, _manager.True, _manager.False);
+        return _manager.CountModels(result);
+    }
+
+    /// <summary>
+    /// Measures BDD truth-table diagnostics generation.
+    /// </summary>
+    [Benchmark]
+    public int TruthTable()
+    {
+        var table = BddDiagnostics.BuildTruthTable(_manager, _featureRule);
+        return table.Rows.Count;
     }
 }

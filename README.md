@@ -1,10 +1,32 @@
 # DecisionDiagramSharp
 
-Modern C#/.NET library for decision diagrams, starting with ZDD (Zero-suppressed Decision Diagram) foundations and extensible toward BDD/MDD.
+Modern C#/.NET library for decision diagrams, including BDD (Binary Decision Diagram) and ZDD (Zero-suppressed Decision Diagram) foundations and extensible toward MDD.
 
 ## Install
 
-NuGet packaging is planned after v0.1 stabilization.
+NuGet packaging is planned before the first packaged preview release.
+
+## BDD Quick Start
+
+```csharp
+using DecisionDiagramSharp;
+using System.Collections.Generic;
+
+var manager = new BddManager();
+var a = manager.GetOrAddVariable("A");
+var b = manager.GetOrAddVariable("B");
+
+var f = manager.And(manager.Var(a), manager.Not(manager.Var(b)));
+
+Console.WriteLine(manager.CountModels(f));
+Console.WriteLine(manager.Evaluate(
+    f,
+    new Dictionary<VariableId, bool>
+    {
+        { a, true },
+        { b, false }
+    }));
+```
 
 ## ZDD Quick Start
 
@@ -49,6 +71,7 @@ var asciidoc = AsciiDocTableExporter.Export(nodeTable);
 
 ## Samples
 
+- `samples/Bdd.FeatureFlags`
 - `samples/Zdd.SetFamilies`
 - `samples/Zdd.FukashigiCounting`
 - `samples/Export.AllFormats`
@@ -59,4 +82,6 @@ var asciidoc = AsciiDocTableExporter.Export(nodeTable);
 - `docs/backlog.md`
 - `docs/done-policy.md`
 - `docs/v0.1-execution-plan.md`
+- `docs/v0.2-execution-plan.md`
+- `docs/concepts/bdd.md`
 - `docs/concepts/zdd.md`

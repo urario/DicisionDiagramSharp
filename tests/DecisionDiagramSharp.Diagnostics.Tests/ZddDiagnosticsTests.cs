@@ -50,9 +50,9 @@ public sealed class ZddDiagnosticsTests
         Assert.AreEqual("ZDD Node Table", nodeTable.Title);
         Assert.AreEqual("ZDD Set Family", setTable.Title);
         Assert.AreEqual("ZDD Statistics", statsTable.Title);
-        Assert.IsTrue(nodeTable.Rows.Count > 0);
-        Assert.AreEqual(2, setTable.Rows.Count);
-        Assert.AreEqual(4, statsTable.Rows.Count);
+        Assert.IsNotEmpty(nodeTable.Rows);
+        Assert.HasCount(2, setTable.Rows);
+        Assert.HasCount(4, statsTable.Rows);
     }
 
     private static string NormalizeNewLines(string value)

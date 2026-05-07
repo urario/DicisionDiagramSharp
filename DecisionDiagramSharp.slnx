@@ -3,6 +3,7 @@
     <Project Path="benchmarks/DecisionDiagramSharp.Benchmarks/DecisionDiagramSharp.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/samples/">
+    <Project Path="samples/Bdd.FeatureFlags/Bdd.FeatureFlags.csproj" />
     <Project Path="samples/Export.AllFormats/Export.AllFormats.csproj" />
     <Project Path="samples/Zdd.FukashigiCounting/Zdd.FukashigiCounting.csproj" />
     <Project Path="samples/Zdd.SetFamilies/Zdd.SetFamilies.csproj" />

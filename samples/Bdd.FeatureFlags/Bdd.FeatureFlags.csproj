@@ -1,12 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DecisionDiagramSharp.Core\DecisionDiagramSharp.Core.csproj" />
     <ProjectReference Include="..\..\src\DecisionDiagramSharp.Diagnostics\DecisionDiagramSharp.Diagnostics.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <ProjectReference Include="..\..\src\DecisionDiagramSharp.Export\DecisionDiagramSharp.Export.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

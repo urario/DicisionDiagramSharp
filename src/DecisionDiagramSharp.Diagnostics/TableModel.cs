@@ -6,49 +6,39 @@ namespace DecisionDiagramSharp.Diagnostics;
 /// <summary>
 /// Generic immutable table model used by text exporters.
 /// </summary>
-public sealed class TableModel
+/// <remarks>
+/// Initializes a new instance of the <see cref="TableModel"/> class.
+/// </remarks>
+public sealed class TableModel(string title, IReadOnlyList<string> columns, IReadOnlyList<TableRow> rows)
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TableModel"/> class.
-    /// </summary>
-    public TableModel(string title, IReadOnlyList<string> columns, IReadOnlyList<TableRow> rows)
-    {
-        Title = title;
-        Columns = columns ?? throw new ArgumentNullException(nameof(columns));
-        Rows = rows ?? throw new ArgumentNullException(nameof(rows));
-    }
 
     /// <summary>
     /// Gets the table title.
     /// </summary>
-    public string Title { get; }
+    public string Title { get; } = title;
 
     /// <summary>
     /// Gets table column names.
     /// </summary>
-    public IReadOnlyList<string> Columns { get; }
+    public IReadOnlyList<string> Columns { get; } = columns ?? throw new ArgumentNullException(nameof(columns));
 
     /// <summary>
     /// Gets table rows.
     /// </summary>
-    public IReadOnlyList<TableRow> Rows { get; }
+    public IReadOnlyList<TableRow> Rows { get; } = rows ?? throw new ArgumentNullException(nameof(rows));
 }
 
 /// <summary>
 /// Represents one row in a <see cref="TableModel"/>.
 /// </summary>
-public sealed class TableRow
+/// <remarks>
+/// Initializes a new instance of the <see cref="TableRow"/> class.
+/// </remarks>
+public sealed class TableRow(IReadOnlyList<string> cells)
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TableRow"/> class.
-    /// </summary>
-    public TableRow(IReadOnlyList<string> cells)
-    {
-        Cells = cells ?? throw new ArgumentNullException(nameof(cells));
-    }
 
     /// <summary>
     /// Gets row cells.
     /// </summary>
-    public IReadOnlyList<string> Cells { get; }
+    public IReadOnlyList<string> Cells { get; } = cells ?? throw new ArgumentNullException(nameof(cells));
 }
