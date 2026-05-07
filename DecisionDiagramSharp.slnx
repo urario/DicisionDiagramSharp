@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/DecisionDiagramSharp.Benchmarks/DecisionDiagramSharp.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Export.AllFormats/Export.AllFormats.csproj" />
+    <Project Path="samples/Zdd.FukashigiCounting/Zdd.FukashigiCounting.csproj" />
+    <Project Path="samples/Zdd.SetFamilies/Zdd.SetFamilies.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/DecisionDiagramSharp.Core/DecisionDiagramSharp.Core.csproj" />
+    <Project Path="src/DecisionDiagramSharp.Diagnostics/DecisionDiagramSharp.Diagnostics.csproj" />
+    <Project Path="src/DecisionDiagramSharp.Export/DecisionDiagramSharp.Export.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DecisionDiagramSharp.Core.Tests/DecisionDiagramSharp.Core.Tests.csproj" />
+    <Project Path="tests/DecisionDiagramSharp.Diagnostics.Tests/DecisionDiagramSharp.Diagnostics.Tests.csproj" />
+    <Project Path="tests/DecisionDiagramSharp.Export.Tests/DecisionDiagramSharp.Export.Tests.csproj" />
+  </Folder>
+</Solution>
