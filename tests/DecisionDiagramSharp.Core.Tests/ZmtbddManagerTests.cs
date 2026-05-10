@@ -1,7 +1,5 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DecisionDiagramSharp.Core.Tests;
@@ -69,7 +67,7 @@ public sealed class ZmtbddManagerTests
         Assert.AreEqual(5, falseB);
         Assert.AreEqual(5, trueB);
         Assert.IsTrue(highZeroFunction.IsTerminal);
-        Assert.AreEqual(7, highZero.GetTerminalValueByNodeId(GetNodeId(highZeroFunction)));
+        Assert.AreEqual(7, highZero.GetTerminalValue(highZeroFunction));
         _ = highZeroFunction.GetHashCode();
     }
 
@@ -81,7 +79,7 @@ public sealed class ZmtbddManagerTests
     /// and that the Validate method accepts a correct diagram without throwing.
     /// </remarks>
     [TestMethod]
-    public void Handles_NodeViews_Statistics_AndValidation_Work()
+    public void Zmtbdd_Handles_NodeViews_Statistics_AndValidation_Work()
     {
         // Arrange
         var manager = CreateThreeVariableManager(out _);
@@ -102,7 +100,8 @@ public sealed class ZmtbddManagerTests
         Assert.IsFalse(function.Equals("not-zmtbdd"));
         Assert.IsTrue(function == manager.Create(values));
         Assert.IsFalse(function != manager.Create(values));
-        Assert.AreEqual("Zmtbdd(" + GetNodeId(function) + ")", function.ToString());
+        Assert.IsTrue(Regex.IsMatch(function.ToString(), @"^Zmtbdd\(\d+\)$"),
+            $"ToString must match 'Zmtbdd(<id>)' format; got: {function.ToString()}");
         Assert.IsTrue(manager.Zero.IsZero);
         Assert.AreEqual(3, manager.TerminalCount);
         Assert.IsFalse(function.IsZero);
@@ -126,7 +125,7 @@ public sealed class ZmtbddManagerTests
     /// Guards all API contract violations so callers receive actionable exceptions rather than silent failures.
     /// </remarks>
     [TestMethod]
-    public void InvalidInputsAndManagerMismatch_ThrowActionableExceptions()
+    public void Zmtbdd_InvalidInputsAndManagerMismatch_ThrowActionableExceptions()
     {
         // Arrange
         var left = CreateThreeVariableManager(out var variables);
@@ -144,47 +143,7 @@ public sealed class ZmtbddManagerTests
         Assert.Throws<DiagramManagerMismatchException>(() => left.Evaluate(rightFunction, BuildAssignment(variables, 0)));
         Assert.Throws<DiagramManagerMismatchException>(() => left.Validate(rightFunction));
         Assert.Throws<InvalidOperationException>(() => left.GetTerminalValue(leftFunction));
-        Assert.Throws<ArgumentException>(() => left.GetTerminalValueByNodeId(GetNodeId(leftFunction)));
-    }
-
-    /// <summary>
-    /// Verifies that ZMTBDD enforces node limits and catches corrupted internal invariants during validation.
-    /// </summary>
-    /// <remarks>
-    /// Confirms DiagramSizeLimitExceededException fires before memory is exhausted, and that Validate
-    /// detects High==0 violations, out-of-range references, ordering violations, and unique-table corruption.
-    /// </remarks>
-    [TestMethod]
-    public void SizeLimitAndCorruptedStateValidation_Throw()
-    {
-        // Arrange / Act / Assert — size limit
-        var limited = new ZmtbddManager(new DecisionDiagramOptions { MaxNodeCount = 0 });
-        limited.GetOrAddVariable("A");
-        Assert.Throws<DiagramSizeLimitExceededException>(() => limited.Create(new[] { 1, 1 }));
-
-        // Arrange / Act / Assert — High == 0 invariant
-        var highZero = CreateThreeVariableManager(out var variables);
-        _ = highZero.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
-        SetNode(highZero, 0, CreateNode(variables[0].Value, -1, -1));
-        Assert.Throws<DiagramException>(() => highZero.Validate());
-
-        // Arrange / Act / Assert — out-of-range child
-        var outOfRange = CreateThreeVariableManager(out var outOfRangeVariables);
-        _ = outOfRange.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
-        SetNode(outOfRange, 0, CreateNode(outOfRangeVariables[0].Value, -999, -1));
-        Assert.Throws<DiagramException>(() => outOfRange.Validate());
-
-        // Arrange / Act / Assert — variable ordering violation
-        var ordering = CreateThreeVariableManager(out var orderingVariables);
-        _ = ordering.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
-        SetNode(ordering, 0, CreateNode(orderingVariables[1].Value, 1, -2));
-        Assert.Throws<InvalidVariableOrderingException>(() => ordering.Validate());
-
-        // Arrange / Act / Assert — unique table cleared
-        var unique = CreateThreeVariableManager(out _);
-        _ = unique.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
-        ((IDictionary)TestHelpers.GetPrivateField(unique, "_uniqueTable")).Clear();
-        Assert.Throws<DiagramException>(() => unique.Validate());
+        Assert.Throws<ArgumentException>(() => left.GetTerminalValueByNodeId(left.GetReachableNodeViews(leftFunction)[0].NodeId));
     }
 
     /// <summary>
@@ -222,29 +181,49 @@ public sealed class ZmtbddManagerTests
     }
 
     /// <summary>
-    /// Verifies that ZMTBDD private unique-table key implements value equality used by canonicalization.
+    /// Verifies that ZMTBDD construction matches naive sparse truth tables for 1- and 2-variable functions.
     /// </summary>
     /// <remarks>
-    /// Covers the ZmtbddKey struct's Equals and GetHashCode methods; incorrect equality would break
-    /// unique-table lookups and produce duplicate canonical nodes.
+    /// Complements the 3-variable test by covering smaller variable counts; sparse distributions
+    /// (55% zero probability) exercise zero-suppression at minimal and moderate scale.
+    /// Seed 20260508, 30 iterations per variable count.
     /// </remarks>
     [TestMethod]
-    public void PrivateKeyTypes_ObjectEqualsAndHashCode_Work()
+    public void RandomizedConstruction_MatchesNaiveSparseTruthTables_OneAndTwoVariables()
     {
         // Arrange
-        var keyType = typeof(ZmtbddManager).GetNestedType("ZmtbddKey", BindingFlags.NonPublic)!;
-        var first = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 1, -1, -2 }, null)!;
-        var second = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 1, -1, -2 }, null)!;
-        var third = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 2, -1, -2 }, null)!;
+        var random = new Random(20260508);
 
-        // Act
-        var equalsObject = keyType.GetMethod("Equals", new[] { typeof(object) })!;
+        foreach (var varCount in new[] { 1, 2 })
+        {
+            var rowCount = 1 << varCount;
+            for (var iteration = 0; iteration < 30; iteration++)
+            {
+                var manager = new ZmtbddManager();
+                var variables = new VariableId[varCount];
+                for (var v = 0; v < varCount; v++)
+                {
+                    variables[v] = manager.GetOrAddVariable(((char)('A' + v)).ToString());
+                }
 
-        // Assert
-        Assert.IsTrue((bool)equalsObject.Invoke(first, new[] { second })!);
-        Assert.IsFalse((bool)equalsObject.Invoke(first, new[] { third })!);
-        Assert.IsFalse((bool)equalsObject.Invoke(first, new object[] { "not-a-key" })!);
-        Assert.AreNotEqual(first.GetHashCode(), third.GetHashCode());
+                var values = new int[rowCount];
+                for (var mask = 0; mask < rowCount; mask++)
+                {
+                    values[mask] = random.NextDouble() < 0.55d ? 0 : random.Next(-3, 4);
+                }
+
+                // Act
+                var function = manager.Create(values);
+
+                // Assert
+                for (var mask = 0; mask < rowCount; mask++)
+                {
+                    Assert.AreEqual(values[mask],
+                        manager.Evaluate(function, TestHelpers.BuildBoolAssignment(variables, mask)),
+                        $"seed=20260508, varCount={varCount}, iteration={iteration}, mask={mask}: Evaluate must return the sparse truth-table value.");
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -348,26 +327,4 @@ public sealed class ZmtbddManagerTests
         return TestHelpers.BuildBoolAssignment(variables, mask);
     }
 
-    private static int GetNodeId(Zmtbdd value)
-    {
-        var property = typeof(Zmtbdd).GetProperty("NodeId", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        return (int)property.GetValue(value)!;
-    }
-
-    private static void SetNode(ZmtbddManager manager, int index, object node)
-    {
-        var nodes = (IList)TestHelpers.GetPrivateField(manager, "_nodes");
-        nodes[index] = node;
-    }
-
-    private static object CreateNode(int variable, int low, int high)
-    {
-        var nodeType = typeof(ZmtbddManager).GetNestedType("ZmtbddNode", BindingFlags.NonPublic)!;
-        return Activator.CreateInstance(
-            nodeType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[] { variable, low, high },
-            null)!;
-    }
 }

@@ -8,14 +8,14 @@ namespace DecisionDiagramSharp.Diagnostics.Tests;
 public sealed class ZmtbddDiagnosticsTests
 {
     /// <summary>
-    /// Verifies that ZMTBDD diagnostics expose DOT, node, value, and statistics models with stable observable content.
+    /// Verifies that ZMTBDD diagnostics expose DOT, node, value, and statistics models with expected observable content.
     /// </summary>
     /// <remarks>
-    /// Confirms that all four diagnostic outputs are deterministic and contain the expected identifiers and values
+    /// Confirms that all four diagnostic outputs contain the expected identifiers, titles, and values
     /// so consumers can embed them in documentation or compare them in golden tests.
     /// </remarks>
     [TestMethod]
-    public void DotNodeValueAndStatisticsTables_AreDeterministic()
+    public void Zmtbdd_DotNodeValueAndStatisticsTables_ContainExpectedObservableContent()
     {
         // Arrange
         var manager = new ZmtbddManager();
@@ -48,7 +48,7 @@ public sealed class ZmtbddDiagnosticsTests
     /// preventing runaway table generation for large diagrams.
     /// </remarks>
     [TestMethod]
-    public void ValueTable_RespectsBoundsAndValidatesOptions()
+    public void Zmtbdd_ValueTable_RespectsBoundsAndValidatesOptions()
     {
         // Arrange
         var manager = new ZmtbddManager();

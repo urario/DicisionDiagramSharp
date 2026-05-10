@@ -14,7 +14,7 @@ public sealed class ZddDiagnosticsTests
     /// and that terminal labels, variable labels, and edge-style markers appear in the graph description.
     /// </remarks>
     [TestMethod]
-    public void DotOutput_IsDeterministic()
+    public void Zdd_DotOutput_IsDeterministic()
     {
         // Arrange
         var manager = new ZddManager();

@@ -14,7 +14,7 @@ public sealed class BddDiagnosticsTests
     /// and that terminal and variable labels appear in the graph description.
     /// </remarks>
     [TestMethod]
-    public void DotOutput_IsDeterministic()
+    public void Bdd_DotOutput_IsDeterministic()
     {
         // Arrange
         var manager = new BddManager();
