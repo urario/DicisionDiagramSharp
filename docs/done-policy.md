@@ -276,6 +276,66 @@ Unacceptable helpers:
 - Helpers that make the Assert invisible from the test body
 - Helpers that mix Arrange, Act, and Assert into a single call
 
+#### 2.3.12 White-Box and Reflection-Based Tests
+
+Public API specification tests MUST NOT depend on private implementation details.
+
+Tests that intentionally inspect or corrupt internal implementation state are allowed only as internal invariant tests. They MUST be isolated from normal public API tests and categorized clearly:
+
+```csharp
+[TestCategory("WhiteBox")]
+[TestCategory("InternalInvariant")]
+[TestCategory("Fragile")]
+```
+
+Examples of white-box dependencies:
+
+- `BindingFlags.NonPublic`
+- `GetPrivateField`
+- `GetNestedType`
+- `Activator.CreateInstance` for private node/key types
+- invoking private methods through reflection
+- reading private handle properties such as `NodeId`
+- mutating private `_nodes`, `_uniqueTable`, or cache fields
+
+White-box tests MUST explain why the invariant cannot be verified through public APIs. They MUST NOT be used as a substitute for public API semantic tests.
+
+#### 2.3.13 Hash Code Assertions
+
+Tests MUST follow the .NET hash-code contract:
+
+- Equal values MUST have equal hash codes.
+- Unequal values are NOT required to have different hash codes.
+
+Therefore tests MUST NOT assert that two unequal values have different hash codes.
+
+Bad:
+
+```csharp
+Assert.AreNotEqual(first.GetHashCode(), third.GetHashCode());
+```
+
+Good:
+
+```csharp
+Assert.AreEqual(first.GetHashCode(), second.GetHashCode());
+Assert.IsFalse(first.Equals(third));
+```
+
+Dictionary lookup behavior may also be used to verify equality and hash-code behavior together.
+
+#### 2.3.14 Coverage Is Not Test Quality
+
+Coverage evidence is required by §2.2, but high coverage MUST NOT be treated as sufficient proof of test quality.
+
+In particular:
+
+- A test that only executes private helpers through reflection is not a strong specification test.
+- A test that builds its expected result with the same library operation under test is not an independent semantic oracle.
+- A test that asserts implementation details without documenting the public contract may block useful refactoring.
+
+Completion evidence for test-quality tasks MUST mention oracle quality, purpose separation, and refactoring resistance where those are relevant to the task.
+
 ---
 
 ## 3. Required Task Table Format

@@ -1304,6 +1304,7 @@ Recommended roadmap:
 | v0.5 | ZMTBDD Baseline |
 | v0.6 | Existing Diagram Refinement and Test Coverage |
 | v0.7 | Usability, Samples, and CodeAnalysis Preparation |
+| v0.7.1-v0.7.5 | Unit test quality remediation from `docs/reviews/unit-test-review.md` |
 | v0.8+ | CodeAnalysis / Conditional Analysis |
 
 MDD and ADD / weighted DD are out of the current roadmap.
@@ -1514,6 +1515,7 @@ Reasons:
 | v0.5 | ZMTBDD baseline is added while Core remains `netstandard2.0` |
 | v0.6 | Existing diagram refinement keeps Core `netstandard2.0` |
 | v0.7 | Usability and sample work keeps library projects `netstandard2.0` |
+| v0.7.1-v0.7.5 | Test-quality remediation keeps production target frameworks unchanged |
 | v0.8+ | CodeAnalysis and optional multi-targeting may be considered if needed |
 
 ### v0.1: ZDD Foundation
@@ -1617,8 +1619,18 @@ Reasons:
 - CLI and CodeAnalysis preparation that does not add dependencies to Core
 - NuGet metadata, README, and docs polish for a cleaner preview package story
 
+### v0.7.1-v0.7.5: Unit Test Quality Remediation
+
+- correct misleading test names and invalid hash-code assertions
+- isolate reflection-based white-box tests from public API specification tests
+- strengthen BDD semantic oracles with explicit truth tables or independent evaluators
+- split large manager test classes by specification area
+- strengthen randomized/property-like tests with fixed seeds and reproducible failure messages
+- keep coverage evidence as a quality gate, but do not treat high coverage as sufficient proof of test quality
+
 ### v0.8+: CodeAnalysis Prototype
 
+- should start only after v0.7.1-v0.7.5 are complete or explicitly deferred by the project owner
 - `IncludeEdge`
 - `IncludePath`
 - Include path ZDD
