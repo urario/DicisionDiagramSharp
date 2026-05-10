@@ -53,7 +53,7 @@ Required TDD workflow:
 6. Refactor while keeping tests green.
 7. Record failing-test evidence, passing-test evidence, and coverage evidence in the task table.
 
-For Core BDD/ZDD operations, test-first development is REQUIRED. A Core behavior task MUST NOT be marked `Done` unless it has test evidence or a documented exception approved in the task table.
+For Core BDD/ZDD/MTBDD/ZMTBDD operations, test-first development is REQUIRED. A Core behavior task MUST NOT be marked `Done` unless it has test evidence or a documented exception approved in the task table.
 
 ---
 
@@ -61,14 +61,16 @@ For Core BDD/ZDD operations, test-first development is REQUIRED. A Core behavior
 
 Completion definitions MUST include a concrete coverage target or an explicit `N/A` rationale.
 
+For v0.3 and later implementation tasks, completion requires 100% method coverage for changed production code. The purpose is not to chase line coverage mechanically; it is to require meaningful unit tests that exercise every public or internal function introduced or changed by the task. Coverage evidence MUST be reviewed at method/function granularity so that no changed function remains at 0% coverage.
+
 Default minimum targets:
 
 | Work Area | Minimum Coverage Target |
 |---|---|
-| Core BDD/ZDD behavior | Line >= 90%; branch >= 85% for changed production code |
-| Core safety and validation logic | Line >= 90%; branch >= 85% for changed production code |
-| Diagnostics / Export | Line >= 85%; branch >= 75% for changed production code, plus golden tests where applicable |
-| CodeAnalysis | Line >= 85%; branch >= 75% for changed production code |
+| Core BDD/ZDD/MTBDD/ZMTBDD behavior | Method = 100% for changed production code; line >= 90%; branch >= 85% |
+| Core safety and validation logic | Method = 100% for changed production code; line >= 90%; branch >= 85% |
+| Diagnostics / Export | Method = 100% for changed production code; line >= 85%; branch >= 75%, plus golden tests where applicable |
+| CodeAnalysis | Method = 100% for changed production code; line >= 85%; branch >= 75% |
 | CLI / Samples | Coverage may be N/A, but build and run evidence is required |
 | Documentation-only tasks | Coverage is N/A with documentation review evidence |
 | Benchmarks | Coverage is N/A, but benchmark build/run evidence is required |
@@ -82,6 +84,18 @@ coverage.cobertura.xml: line 92.4%, branch 87.1% for DecisionDiagramSharp.Core
 ```
 
 A task MUST NOT be marked `Done` if it fails its stated coverage target unless the exception is documented with rationale and follow-up work.
+
+### 2.3 Unit Test Quality Policy
+
+For v0.3 and later implementation tasks, unit tests MUST be written for behavior, not merely to execute functions.
+
+Rules:
+
+- Each test method MUST state its purpose at the beginning of the test body with an English comment such as `// Purpose: ...`.
+- Tests SHOULD be organized in Arrange / Act / Assert form. Explicit `// Arrange`, `// Act`, and `// Assert` comments are preferred when they improve readability.
+- Tests that only mirror implementation steps or call a method without asserting observable behavior are not acceptable.
+- Tests SHOULD include meaningful edge cases, invalid input cases, and ownership/compatibility cases where relevant.
+- Randomized or broad comparison tests MUST still state the semantic property they verify.
 
 ---
 

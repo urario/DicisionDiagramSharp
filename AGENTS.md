@@ -15,11 +15,21 @@ Initial focus:
 - **BDD**: Binary Decision Diagrams for Boolean functions and symbolic conditions
 - **ZDD**: Zero-suppressed Decision Diagrams for sparse set families
 
-Future scope:
+Numeric decision diagram scope:
+
+- **MTBDD**: Multi-Terminal Binary Decision Diagrams for integer-valued Boolean-domain functions
+- **ZMTBDD**: Zero-suppressed MTBDDs for sparse numeric functions with many zero-valued regions
+
+Other planned scope:
+
+- symbolic code-analysis utilities, after the existing diagram refinement roadmap unless explicitly reprioritized
+
+Out of current plan:
 
 - **MDD**: Multi-valued Decision Diagrams
 - **ADD / weighted decision diagrams**
-- symbolic code-analysis utilities
+
+MDD and ADD are not roadmap targets unless the project owner explicitly reopens them. Keep designs general enough that they do not make those families impossible, but do not add speculative MDD/ADD abstractions.
 
 The project is intended to be:
 
@@ -225,13 +235,47 @@ Important distinction:
 
 Do not conflate these operations.
 
-### 3.3 MDD Future
+### 3.3 MTBDD
 
-MDD is future work.
+MTBDD represents total functions:
 
-Do not implement MDD unless specifically requested.
+```text
+f : {0,1}^n -> T
+```
 
-When designing APIs, avoid choices that would make MDD impossible, but do not add speculative complexity.
+where terminals are values such as integers, labels, or other immutable value-domain elements.
+
+Initial MTBDD implementation priority:
+
+- integer terminals first
+- reduced ordered MTBDD
+- separate `Mtbdd` handle and `MtbddManager`
+- terminal interning / unique terminal table
+- non-terminal unique table
+- construction from bounded truth tables or explicit assignments
+- `Evaluate`
+- statistics and diagnostics
+- comparison against naive truth-table models in tests
+
+Do not fold MTBDD into BDD or ZDD managers. MTBDD has different terminal semantics and should keep its own manager internals.
+
+### 3.4 ZMTBDD
+
+ZMTBDD is a zero-suppressed MTBDD variant for sparse numeric functions.
+
+Reduction policy to design and test before implementation:
+
+```text
+If High is the zero terminal, remove the node and return Low.
+```
+
+The zero terminal represents an actual numeric zero in the represented function.
+
+### 3.5 MDD and ADD Out of Plan
+
+MDD and ADD / weighted DD are currently out of plan.
+
+Do not implement MDD or ADD unless specifically requested by the project owner. When designing APIs, avoid choices that would make them impossible, but do not add speculative complexity for them.
 
 ---
 
@@ -644,20 +688,22 @@ Required order:
 6. Refactor while preserving green tests.
 7. Record failing-test evidence, passing-test evidence, and coverage evidence in the task table.
 
-BDD and ZDD semantic operations MUST use test-first development. Do not mark such tasks as `Done` without test evidence.
+BDD, ZDD, MTBDD, and ZMTBDD semantic operations MUST use test-first development. Do not mark such tasks as `Done` without test evidence.
 
 ### 9.1.2 Coverage Requirements
 
 Every non-trivial implementation task MUST declare a coverage target in its task table.
 
+For v0.3 and later implementation tasks, changed production code must reach 100% method coverage. This is a quality gate for meaningful unit tests, not a license to write shallow tests that merely execute lines. Coverage evidence must be reviewed at method/function granularity so that no changed function remains at 0% coverage.
+
 Default minimum targets:
 
 | Work Area | Minimum Coverage Target |
 |---|---|
-| Core BDD/ZDD behavior | Line >= 90%; branch >= 85% for changed production code |
-| Core validation and exception paths | Line >= 90%; branch >= 85% for changed production code |
-| Diagnostics / Export | Line >= 85%; branch >= 75% for changed production code, plus golden tests where applicable |
-| CodeAnalysis | Line >= 85%; branch >= 75% for changed production code |
+| Core BDD/ZDD/MTBDD/ZMTBDD behavior | Method = 100% for changed production code; line >= 90%; branch >= 85% |
+| Core validation and exception paths | Method = 100% for changed production code; line >= 90%; branch >= 85% |
+| Diagnostics / Export | Method = 100% for changed production code; line >= 85%; branch >= 75%, plus golden tests where applicable |
+| CodeAnalysis | Method = 100% for changed production code; line >= 85%; branch >= 75% |
 | CLI / Samples | Coverage may be N/A, but build and run evidence is required |
 | Documentation-only tasks | Coverage is N/A with review evidence |
 | Benchmarks | Coverage is N/A, but benchmark build/run evidence is required |
@@ -665,6 +711,15 @@ Default minimum targets:
 Coverage evidence MUST be concrete. Acceptable evidence includes coverage report filenames, measured line/branch percentages, or CI coverage output.
 
 A task MUST NOT be marked `Done` if the stated coverage target is not met, unless the exception is documented with rationale and follow-up work.
+
+### 9.1.3 Unit Test Quality
+
+For v0.3 and later implementation tasks:
+
+- Each test method must state its purpose at the beginning of the test body with an English comment such as `// Purpose: ...`.
+- Unit tests must follow Arrange / Act / Assert structure where practical.
+- Tests that only trace a function call without asserting meaningful behavior are not acceptable.
+- Edge cases, invalid inputs, ownership mismatches, and formatting stability should be covered where relevant.
 
 ### 9.2 ZDD Tests
 
@@ -705,7 +760,16 @@ Required comparison targets:
 - `Exists`
 - `Evaluate`
 
-### 9.4 Golden Tests
+### 9.4 MTBDD/ZMTBDD Tests
+
+For MTBDD and ZMTBDD operations, compare against naive integer truth-table models for small variable counts.
+
+Required comparison targets:
+
+- MTBDD construction and `Evaluate`
+- ZMTBDD construction, zero-suppression behavior, and `Evaluate`
+
+### 9.5 Golden Tests
 
 Use golden tests for stable text outputs.
 
@@ -718,7 +782,7 @@ Targets:
 
 If output format intentionally changes, update golden files and document the reason.
 
-### 9.5 Benchmark Skeleton
+### 9.6 Benchmark Skeleton
 
 Performance-sensitive operations should have BenchmarkDotNet coverage.
 
@@ -729,6 +793,8 @@ Initial benchmark targets:
 - ZDD `Difference`
 - BDD `Ite`
 - BDD truth-table generation
+- MTBDD construction
+- ZMTBDD construction
 - exporter formatting
 
 Do not micro-optimize before correctness tests are solid.
@@ -818,13 +884,18 @@ Package metadata should include:
 
 - BDD
 - ZDD
-- MDD
+- MTBDD
+- ZMTBDD
 - decision diagrams
 - binary decision diagram
 - zero-suppressed decision diagram
+- multi-terminal binary decision diagram
 - C#
 - .NET
 - symbolic computation
+- numeric correction
+- calibration table
+- approximate arithmetic
 - truth table
 - Graphviz
 - AsciiDoc
@@ -839,7 +910,7 @@ Use `PackageLicenseExpression`, not deprecated license URL metadata.
 Repository description should include:
 
 ```text
-Modern C#/.NET library for BDD, ZDD, MDD and decision diagrams: symbolic Boolean logic, sparse set families, truth tables, DOT/CSV/Markdown/AsciiDoc export, and code-analysis examples.
+Modern C#/.NET library for BDD, ZDD, MTBDD, ZMTBDD and decision diagrams: symbolic Boolean logic, sparse set families, numeric correction functions, truth tables, DOT/CSV/Markdown/AsciiDoc export, and code-analysis examples.
 ```
 
 Recommended topics:
@@ -847,14 +918,20 @@ Recommended topics:
 ```text
 bdd
 zdd
+mtbdd
+zmtbdd
 decision-diagrams
 binary-decision-diagram
 zero-suppressed-decision-diagram
+multi-terminal-bdd
 csharp
 dotnet
 symbolic-computation
 boolean-algebra
 logic
+numeric-correction
+calibration-table
+approximate-computing
 set-family
 graph-algorithms
 combinatorics
@@ -871,7 +948,8 @@ README should include both abbreviations and full names:
 
 - BDD / Binary Decision Diagram
 - ZDD / Zero-suppressed Decision Diagram
-- MDD / Multi-valued Decision Diagram
+- MTBDD / Multi-Terminal Binary Decision Diagram
+- ZMTBDD / Zero-suppressed Multi-Terminal Binary Decision Diagram
 
 ---
 
@@ -945,6 +1023,19 @@ Steps:
 5. Add sample and report export.
 6. Add tests using small synthetic graphs.
 
+### 15.5 Add an MTBDD or ZMTBDD Feature
+
+Steps:
+
+1. Define exact integer-function semantics before implementation.
+2. Keep MTBDD and ZMTBDD managers or construction APIs semantically separate where reduction rules or terminal meanings differ.
+3. Add tests first against a naive truth-table model.
+4. Validate manager ownership.
+5. Ensure all node creation goes through the canonical `MakeNode` path.
+6. Add diagnostics, statistics, and bounded table output where user-facing.
+7. Add comparison benchmarks when the operation affects MTBDD or ZMTBDD performance claims.
+8. Document whether the task is baseline infrastructure, usability refinement, diagnostics/export work, or benchmark work.
+
 ---
 
 ## 16. Do Not Do These Things
@@ -964,6 +1055,7 @@ Do not:
 - over-optimize before measuring
 - make unsupported claims in documentation
 - copy copyrighted lecture slides or diagrams into the repository
+- implement MDD or ADD / weighted DD without an explicit project-owner decision reopening that roadmap
 - introduce .NET 6/7/8-only APIs into Core while it is `netstandard2.0` only
 - add WPF or WinForms dependencies to Core
 - make Core target `net8.0-windows`
@@ -1028,6 +1120,51 @@ Must include:
 - README improvements
 - NuGet metadata
 - documentation skeleton
+
+### v0.4: MTBDD Baseline
+
+Must include:
+
+- integer-valued MTBDD core
+- typed MTBDD handle and manager
+- reduced ordered construction
+- evaluation
+- diagnostics/statistics
+- truth-table comparison tests
+- construction/evaluation benchmarks
+
+### v0.5: ZMTBDD Baseline
+
+Must include:
+
+- ZMTBDD semantics and reduction-rule design note
+- typed ZMTBDD handle or explicitly separated construction API
+- zero-suppressed construction and evaluation
+- comparison tests against naive sparse numeric functions
+- diagnostics/statistics
+- benchmarks against MTBDD
+
+### v0.6: Existing Diagram Refinement and Test Coverage
+
+Must include:
+
+- BDD/ZDD test helper refactoring
+- v0.1/v0.2 coverage review and meaningful gap closure
+- MTBDD/ZMTBDD edge-case tests
+- diagnostics/export golden test stabilization
+- benchmark cleanup for supported diagram families
+- documentation updates for the current supported diagram set
+
+### v0.7: Usability, Samples, and CodeAnalysis Preparation
+
+Must include:
+
+- high-level API refinement for BDD, ZDD, MTBDD, and ZMTBDD
+- discoverable construction and export helpers
+- refreshed BDD/ZDD/MTBDD/ZMTBDD samples
+- getting-started and API guide refresh
+- CodeAnalysis boundary design outside Core
+- NuGet metadata and README polish
 
 ---
 

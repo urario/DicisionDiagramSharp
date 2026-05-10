@@ -3,35 +3,30 @@ using System;
 namespace DecisionDiagramSharp;
 
 /// <summary>
-/// Typed handle to a ZDD value owned by a specific <see cref="ZddManager"/>.
+/// Typed handle to an MTBDD value owned by a specific <see cref="MtbddManager"/>.
 /// </summary>
-public readonly struct Zdd : IEquatable<Zdd>
+public readonly struct Mtbdd : IEquatable<Mtbdd>
 {
-    internal Zdd(ZddManager manager, int nodeId)
+    internal Mtbdd(MtbddManager manager, int nodeId)
     {
         Manager = manager;
         NodeId = nodeId;
     }
 
     /// <summary>
-    /// Gets the manager that owns this ZDD value.
+    /// Gets the manager that owns this MTBDD value.
     /// </summary>
-    public ZddManager Manager { get; }
+    public MtbddManager Manager { get; }
 
     internal int NodeId { get; }
 
     /// <summary>
-    /// Gets a value indicating whether this handle points to the Empty terminal.
+    /// Gets a value indicating whether this handle points to an integer terminal.
     /// </summary>
-    public bool IsEmpty => NodeId == ZddManager.EmptyNodeId;
-
-    /// <summary>
-    /// Gets a value indicating whether this handle points to the Base terminal.
-    /// </summary>
-    public bool IsBase => NodeId == ZddManager.BaseNodeId;
+    public bool IsTerminal => MtbddManager.IsTerminalId(NodeId);
 
     /// <inheritdoc />
-    public bool Equals(Zdd other)
+    public bool Equals(Mtbdd other)
     {
         return ReferenceEquals(Manager, other.Manager) && NodeId == other.NodeId;
     }
@@ -39,7 +34,7 @@ public readonly struct Zdd : IEquatable<Zdd>
     /// <inheritdoc />
     public override bool Equals(object obj)
     {
-        return obj is Zdd other && Equals(other);
+        return obj is Mtbdd other && Equals(other);
     }
 
     /// <inheritdoc />
@@ -55,21 +50,21 @@ public readonly struct Zdd : IEquatable<Zdd>
     /// <inheritdoc />
     public override string ToString()
     {
-        return "Zdd(" + NodeId + ")";
+        return "Mtbdd(" + NodeId + ")";
     }
 
     /// <summary>
-    /// Compares two ZDD handles for equality.
+    /// Compares two MTBDD handles for equality.
     /// </summary>
-    public static bool operator ==(Zdd left, Zdd right)
+    public static bool operator ==(Mtbdd left, Mtbdd right)
     {
         return left.Equals(right);
     }
 
     /// <summary>
-    /// Compares two ZDD handles for inequality.
+    /// Compares two MTBDD handles for inequality.
     /// </summary>
-    public static bool operator !=(Zdd left, Zdd right)
+    public static bool operator !=(Mtbdd left, Mtbdd right)
     {
         return !left.Equals(right);
     }

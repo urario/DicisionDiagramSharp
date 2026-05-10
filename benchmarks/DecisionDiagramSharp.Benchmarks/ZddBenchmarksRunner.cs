@@ -148,3 +148,175 @@ public class BddBenchmarks
         return table.Rows.Count;
     }
 }
+
+[MemoryDiagnoser]
+public class MtbddBenchmarks
+{
+    private int[] _values = Array.Empty<int>();
+    private Dictionary<VariableId, bool> _assignment = new Dictionary<VariableId, bool>();
+    private Mtbdd _function;
+    private MtbddManager _manager = new MtbddManager();
+
+    /// <summary>
+    /// Prepares reusable MTBDD benchmark input.
+    /// </summary>
+    [GlobalSetup]
+    public void Setup()
+    {
+        _manager = new MtbddManager();
+        var variables = new VariableId[12];
+        for (var i = 0; i < variables.Length; i++)
+        {
+            variables[i] = _manager.GetOrAddVariable("X" + i);
+        }
+
+        _values = new int[1 << variables.Length];
+        for (var mask = 0; mask < _values.Length; mask++)
+        {
+            _values[mask] = CountBits(mask) % 7 - 3;
+        }
+
+        _function = _manager.Create(_values);
+        _assignment = BuildAssignment(variables, 0x5A5);
+    }
+
+    /// <summary>
+    /// Measures MTBDD construction throughput.
+    /// </summary>
+    [Benchmark]
+    public int Build()
+    {
+        var manager = CreateManager(12);
+        var function = manager.Create(_values);
+        return manager.GetStatistics(function).ReachableNodeCount;
+    }
+
+    /// <summary>
+    /// Measures MTBDD evaluation throughput.
+    /// </summary>
+    [Benchmark]
+    public int Evaluate()
+    {
+        return _manager.Evaluate(_function, _assignment);
+    }
+
+    private static MtbddManager CreateManager(int variableCount)
+    {
+        var manager = new MtbddManager();
+        for (var i = 0; i < variableCount; i++)
+        {
+            manager.GetOrAddVariable("X" + i);
+        }
+
+        return manager;
+    }
+
+    private static Dictionary<VariableId, bool> BuildAssignment(IReadOnlyList<VariableId> variables, int mask)
+    {
+        var assignment = new Dictionary<VariableId, bool>();
+        for (var i = 0; i < variables.Count; i++)
+        {
+            assignment.Add(variables[i], (mask & (1 << i)) != 0);
+        }
+
+        return assignment;
+    }
+
+    private static int CountBits(int value)
+    {
+        var count = 0;
+        while (value != 0)
+        {
+            count += value & 1;
+            value >>= 1;
+        }
+
+        return count;
+    }
+}
+
+[MemoryDiagnoser]
+public class ZmtbddBenchmarks
+{
+    private int[] _values = Array.Empty<int>();
+    private Dictionary<VariableId, bool> _assignment = new Dictionary<VariableId, bool>();
+    private Zmtbdd _function;
+    private ZmtbddManager _manager = new ZmtbddManager();
+
+    /// <summary>
+    /// Prepares reusable ZMTBDD benchmark input.
+    /// </summary>
+    [GlobalSetup]
+    public void Setup()
+    {
+        _manager = new ZmtbddManager();
+        var variables = new VariableId[12];
+        for (var i = 0; i < variables.Length; i++)
+        {
+            variables[i] = _manager.GetOrAddVariable("X" + i);
+        }
+
+        _values = new int[1 << variables.Length];
+        for (var mask = 0; mask < _values.Length; mask++)
+        {
+            _values[mask] = (mask % 5) == 0 ? CountBits(mask) % 5 + 1 : 0;
+        }
+
+        _function = _manager.Create(_values);
+        _assignment = BuildAssignment(variables, 0x500);
+    }
+
+    /// <summary>
+    /// Measures ZMTBDD construction throughput.
+    /// </summary>
+    [Benchmark]
+    public int Build()
+    {
+        var manager = CreateManager(12);
+        var function = manager.Create(_values);
+        return manager.GetStatistics(function).ReachableNodeCount;
+    }
+
+    /// <summary>
+    /// Measures ZMTBDD evaluation throughput.
+    /// </summary>
+    [Benchmark]
+    public int Evaluate()
+    {
+        return _manager.Evaluate(_function, _assignment);
+    }
+
+    private static ZmtbddManager CreateManager(int variableCount)
+    {
+        var manager = new ZmtbddManager();
+        for (var i = 0; i < variableCount; i++)
+        {
+            manager.GetOrAddVariable("X" + i);
+        }
+
+        return manager;
+    }
+
+    private static Dictionary<VariableId, bool> BuildAssignment(IReadOnlyList<VariableId> variables, int mask)
+    {
+        var assignment = new Dictionary<VariableId, bool>();
+        for (var i = 0; i < variables.Count; i++)
+        {
+            assignment.Add(variables[i], (mask & (1 << i)) != 0);
+        }
+
+        return assignment;
+    }
+
+    private static int CountBits(int value)
+    {
+        var count = 0;
+        while (value != 0)
+        {
+            count += value & 1;
+            value >>= 1;
+        }
+
+        return count;
+    }
+}

@@ -3,35 +3,35 @@ using System;
 namespace DecisionDiagramSharp;
 
 /// <summary>
-/// Typed handle to a ZDD value owned by a specific <see cref="ZddManager"/>.
+/// Typed handle to a ZMTBDD value owned by a specific <see cref="ZmtbddManager"/>.
 /// </summary>
-public readonly struct Zdd : IEquatable<Zdd>
+public readonly struct Zmtbdd : IEquatable<Zmtbdd>
 {
-    internal Zdd(ZddManager manager, int nodeId)
+    internal Zmtbdd(ZmtbddManager manager, int nodeId)
     {
         Manager = manager;
         NodeId = nodeId;
     }
 
     /// <summary>
-    /// Gets the manager that owns this ZDD value.
+    /// Gets the manager that owns this ZMTBDD value.
     /// </summary>
-    public ZddManager Manager { get; }
+    public ZmtbddManager Manager { get; }
 
     internal int NodeId { get; }
 
     /// <summary>
-    /// Gets a value indicating whether this handle points to the Empty terminal.
+    /// Gets a value indicating whether this handle points to the zero terminal.
     /// </summary>
-    public bool IsEmpty => NodeId == ZddManager.EmptyNodeId;
+    public bool IsZero => NodeId == ZmtbddManager.ZeroNodeId;
 
     /// <summary>
-    /// Gets a value indicating whether this handle points to the Base terminal.
+    /// Gets a value indicating whether this handle points to any numeric terminal.
     /// </summary>
-    public bool IsBase => NodeId == ZddManager.BaseNodeId;
+    public bool IsTerminal => ZmtbddManager.IsTerminalId(NodeId);
 
     /// <inheritdoc />
-    public bool Equals(Zdd other)
+    public bool Equals(Zmtbdd other)
     {
         return ReferenceEquals(Manager, other.Manager) && NodeId == other.NodeId;
     }
@@ -39,7 +39,7 @@ public readonly struct Zdd : IEquatable<Zdd>
     /// <inheritdoc />
     public override bool Equals(object obj)
     {
-        return obj is Zdd other && Equals(other);
+        return obj is Zmtbdd other && Equals(other);
     }
 
     /// <inheritdoc />
@@ -55,21 +55,21 @@ public readonly struct Zdd : IEquatable<Zdd>
     /// <inheritdoc />
     public override string ToString()
     {
-        return "Zdd(" + NodeId + ")";
+        return "Zmtbdd(" + NodeId + ")";
     }
 
     /// <summary>
-    /// Compares two ZDD handles for equality.
+    /// Compares two ZMTBDD handles for equality.
     /// </summary>
-    public static bool operator ==(Zdd left, Zdd right)
+    public static bool operator ==(Zmtbdd left, Zmtbdd right)
     {
         return left.Equals(right);
     }
 
     /// <summary>
-    /// Compares two ZDD handles for inequality.
+    /// Compares two ZMTBDD handles for inequality.
     /// </summary>
-    public static bool operator !=(Zdd left, Zdd right)
+    public static bool operator !=(Zmtbdd left, Zmtbdd right)
     {
         return !left.Equals(right);
     }

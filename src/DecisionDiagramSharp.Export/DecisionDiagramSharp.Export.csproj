@@ -9,5 +9,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PackageId>DecisionDiagramSharp.Export</PackageId>
+    <Title>DecisionDiagramSharp.Export</Title>
+    <Description>CSV, Markdown, AsciiDoc, and high-level text export helpers for DecisionDiagramSharp diagnostics tables.</Description>
   </PropertyGroup>
 </Project>

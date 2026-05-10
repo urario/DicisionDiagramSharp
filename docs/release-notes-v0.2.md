@@ -46,5 +46,6 @@ Coverage artifacts:
 ## Known Gaps
 
 - Unified `DecisionDiagramManager` remains v0.3 scope.
-- CodeAnalysis remains future scope.
+- MTBDD and ZMTBDD remain future scope after v0.3.
+- CodeAnalysis remains future scope while existing diagram foundations are refined unless reprioritized.
 - Complement edges and dynamic variable reordering are intentionally not implemented.

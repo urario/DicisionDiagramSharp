@@ -9,5 +9,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PackageId>DecisionDiagramSharp.Diagnostics</PackageId>
+    <Title>DecisionDiagramSharp.Diagnostics</Title>
+    <Description>DOT, table, statistics, and high-level diagnostics helpers for DecisionDiagramSharp diagrams.</Description>
   </PropertyGroup>
 </Project>

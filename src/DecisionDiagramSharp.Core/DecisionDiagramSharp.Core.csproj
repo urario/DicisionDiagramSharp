@@ -6,5 +6,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PackageId>DecisionDiagramSharp.Core</PackageId>
+    <Title>DecisionDiagramSharp.Core</Title>
+    <Description>Core BDD, ZDD, MTBDD, and ZMTBDD data structures and operations for DecisionDiagramSharp.</Description>
   </PropertyGroup>
 </Project>

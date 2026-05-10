@@ -13,7 +13,10 @@ public readonly struct Bdd : IEquatable<Bdd>
         NodeId = nodeId;
     }
 
-    internal BddManager Manager { get; }
+    /// <summary>
+    /// Gets the manager that owns this BDD value.
+    /// </summary>
+    public BddManager Manager { get; }
 
     internal int NodeId { get; }
 
@@ -69,5 +72,48 @@ public readonly struct Bdd : IEquatable<Bdd>
     public static bool operator !=(Bdd left, Bdd right)
     {
         return !left.Equals(right);
+    }
+
+    /// <summary>
+    /// Returns the logical negation of a BDD value.
+    /// </summary>
+    public static Bdd operator !(Bdd value)
+    {
+        return GetManager(value).Not(value);
+    }
+
+    /// <summary>
+    /// Returns the conjunction of two BDD values.
+    /// </summary>
+    public static Bdd operator &(Bdd left, Bdd right)
+    {
+        return GetManager(left).And(left, right);
+    }
+
+    /// <summary>
+    /// Returns the disjunction of two BDD values.
+    /// </summary>
+    public static Bdd operator |(Bdd left, Bdd right)
+    {
+        return GetManager(left).Or(left, right);
+    }
+
+    /// <summary>
+    /// Returns the exclusive-or of two BDD values.
+    /// </summary>
+    public static Bdd operator ^(Bdd left, Bdd right)
+    {
+        return GetManager(left).Xor(left, right);
+    }
+
+    private static BddManager GetManager(Bdd value)
+    {
+        if (value.Manager == null)
+        {
+            throw new DiagramManagerMismatchException(
+                "The BDD value is not associated with a BddManager. Create BDD values through BddManager or DecisionDiagramManager.Bdd before using operators.");
+        }
+
+        return value.Manager;
     }
 }

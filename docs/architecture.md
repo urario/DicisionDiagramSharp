@@ -6,12 +6,12 @@
 |---|---|
 | Document name | DecisionDiagramSharp Architecture Design Document |
 | Target | DecisionDiagramSharp |
-| Purpose | Define the architectural direction for a C#/.NET decision diagram library supporting BDD, ZDD, and future MDD/ADD variants |
+| Purpose | Define the architectural direction for a C#/.NET decision diagram library supporting BDD, ZDD, MTBDD, and ZMTBDD |
 | Intended path | `docs/architecture.md` |
-| Initial target versions | v0.1 to v0.5 |
+| Initial target versions | v0.1 to v0.8 |
 | Recommended target for library projects | C# / `netstandard2.0` |
 | Recommended platform for development, tests, CLI, samples, and benchmarks | .NET 8 LTS or later |
-| Recommended license | MIT |
+| Recommended license | Apache-2.0 |
 | Distribution | GitHub / NuGet |
 
 Notes:
@@ -26,7 +26,7 @@ Notes:
 
 ### 1.1 Background
 
-`DecisionDiagramSharp` is a modern C#/.NET library for working with decision diagrams such as BDD, ZDD, and future MDD/ADD variants.
+`DecisionDiagramSharp` is a modern C#/.NET library for working with decision diagrams such as BDD, ZDD, MTBDD, and ZMTBDD.
 
 The initial primary targets are:
 
@@ -36,13 +36,15 @@ The initial primary targets are:
 - **ZDD: Zero-suppressed Decision Diagram**
   - Represents sparse set families, include path sets, modification candidate sets, impact sets, and graph path families.
 
-Future targets include:
+Numeric decision diagram targets include:
 
-- **MDD: Multi-valued Decision Diagram**
-  - Represents multi-valued states such as enums, product configurations, operating systems, device types, and execution modes.
+- **MTBDD: Multi-Terminal Binary Decision Diagram**
+  - Represents integer-valued Boolean-domain functions and provides the direct-function baseline for numeric experiments.
 
-- **ADD / Weighted DD**
-  - Represents costs, risks, probabilities, scores, and other weighted evaluations.
+- **ZMTBDD: Zero-suppressed MTBDD**
+  - Represents sparse numeric functions with many zero-valued regions and provides the zero-suppressed numeric representation.
+
+MDD and ADD / weighted DD are out of the current roadmap. They should not drive abstractions unless the project owner explicitly reopens that direction.
 
 The project may begin as a personal or experimental project, but the design quality should not be compromised. It should grow into an OSS candidate that is easy to learn, easy to experiment with, and suitable for practical applications.
 
@@ -58,7 +60,7 @@ The design principles of `DecisionDiagramSharp` are as follows.
    - Core must not contain file I/O, CLI parsing, Graphviz process execution, CSV/Markdown/AsciiDoc formatting, or code-analysis domain logic.
    - Core focuses only on decision diagram construction, operations, traversal, validation, and statistics.
 
-2. **Do not over-unify BDD, ZDD, and MDD**
+2. **Do not over-unify BDD, ZDD, MTBDD, and ZMTBDD diagrams**
    - Each decision diagram type has different terminal semantics, reduction rules, and operation semantics.
    - Commonization should be limited to variable identifiers, variable tables, ordering, statistics, validation conventions, and diagnostic concepts.
 
@@ -75,7 +77,7 @@ The design principles of `DecisionDiagramSharp` are as follows.
    - Samples should build and run in CI.
 
 6. **Do not block future extension**
-   - Complement edges, dynamic variable reordering, MDD, ADD, and optional CUDD backends should remain possible.
+   - Complement edges, dynamic variable reordering, numeric diagram refinements, and optional native backends should remain possible.
    - Initial implementation should prioritize simplicity and correctness over advanced optimization.
 
 7. **Prioritize consumer compatibility for library projects**
@@ -131,7 +133,7 @@ The design principles of `DecisionDiagramSharp` are as follows.
 |---|---|
 | Learners | Try basic BDD/ZDD concepts |
 | OSS developers | Use decision diagram operations in C# |
-| Researchers and experimenters | Experiment with BDD/ZDD/MDD algorithms |
+| Researchers and experimenters | Experiment with BDD/ZDD/MTBDD/ZMTBDD algorithms |
 | Legacy-code maintainers | Analyze include dependencies, conditional compilation, and impact sets |
 | Tool developers | Integrate the library into static analysis or visualization tools |
 | AI-assisted developers | Extend features, tests, and documentation using AI support |
@@ -161,12 +163,12 @@ The following are out of scope for the initial versions:
 - Dynamic variable reordering
 - Complement edges
 - Parallel BDD/ZDD operations
-- Full MDD/ADD implementation
+- MDD / ADD implementation
 - .NET 8-specific Core optimization in the initial stage
 - `net8.0-windows` or WPF dependency in Core
 - Direct use of Windows-specific APIs from Core
 
-These items may be considered as future extensions.
+MDD and ADD are not planned roadmap extensions at this time. The other items may be considered as future extensions.
 
 ---
 
@@ -181,7 +183,8 @@ DecisionDiagramSharp
 |   +-- Common
 |   +-- BDD
 |   +-- ZDD
-|   +-- MDD future
+|   +-- MTBDD
+|   +-- ZMTBDD
 |   +-- Manager
 |
 +-- Diagnostics
@@ -298,16 +301,46 @@ Console.WriteLine(viaWindows.ToMarkdown());
 File.WriteAllText("paths.dot", viaWindows.ToDot());
 ```
 
+#### 4.2.4 MTBDD and ZMTBDD Features
+
+MTBDD and ZMTBDD extend the library from Boolean and set-family diagrams into integer-valued Boolean-domain functions.
+
+The numeric diagram work is intentionally staged:
+
+| Diagram | Role | Priority |
+|---|---|---:|
+| MTBDD | Direct integer-valued function representation | High |
+| ZMTBDD | Zero-suppressed sparse numeric representation | High |
+
+MTBDD represents:
+
+```text
+f : {0,1}^n -> Z
+```
+
+Initial numeric diagram features:
+
+- typed handles and manager-owned values
+- integer terminal interning
+- reduced ordered construction
+- bounded construction from explicit truth-table rows
+- `Evaluate`
+- diagram statistics
+- DOT and node-table diagnostics
+- construction and evaluation benchmarks for MTBDD and ZMTBDD
+- API polish, documentation, and tests that make numeric diagrams as approachable as BDD and ZDD
+
 ### 4.3 Diagnostics Features
 
 | Feature | Target | Purpose |
 |---|---|---|
-| DOT output | BDD/ZDD | Structure visualization |
+| DOT output | BDD/ZDD/MTBDD/ZMTBDD | Structure visualization |
 | Truth table | BDD | Learning, validation, explanation |
 | Model enumeration | BDD | Show satisfying examples |
 | Set-family preview | ZDD | Show part of a large set family |
-| Node table dump | BDD/ZDD | Implementation debugging |
-| Statistics | BDD/ZDD | Performance and scale inspection |
+| Integer function table | MTBDD/ZMTBDD | Validate numeric semantics |
+| Node table dump | BDD/ZDD/MTBDD/ZMTBDD | Implementation debugging |
+| Statistics | BDD/ZDD/MTBDD/ZMTBDD | Performance and scale inspection |
 
 ### 4.4 Export Features
 
@@ -327,6 +360,8 @@ DOT is a graph format and should be treated separately from CSV/Markdown/AsciiDo
 | BDD node list | Yes | Yes | Yes | Yes |
 | ZDD set-family list | Yes | Yes | Yes | No |
 | ZDD node list | Yes | Yes | Yes | Yes |
+| MTBDD value table | Yes | Yes | Yes | No |
+| MTBDD/ZMTBDD node list | Yes | Yes | Yes | Yes |
 | Statistics | Yes | Yes | Yes | No |
 | Include analysis report | Yes | Yes | Yes | No |
 
@@ -374,6 +409,19 @@ ZDD
   +-- Zdd unique table
   +-- Zdd operation cache
 
+MTBDD
+  +-- Mtbdd handle
+  +-- terminal value table
+  +-- MtbddNode table
+  +-- Mtbdd unique table
+
+ZMTBDD
+  +-- Zmtbdd handle
+  +-- zero terminal
+  +-- terminal value table
+  +-- ZmtbddNode table
+  +-- Zmtbdd unique table
+
 Diagnostics
   +-- TruthTable
   +-- SetFamilyTable
@@ -400,7 +448,7 @@ Responsibilities:
 
 - Identify BDD variables
 - Identify ZDD set elements
-- Identify future MDD variables
+- Identify MTBDD/ZMTBDD Boolean-domain variables
 - Variable name mapping is owned by `VariableTable`
 
 ### 5.3 VariableTable
@@ -418,12 +466,12 @@ Responsibilities:
 
 - Generate IDs from variable names
 - Resolve display names from IDs
-- Provide a shared variable namespace for BDD/ZDD/MDD where appropriate
+- Provide a shared variable namespace for BDD/ZDD/MTBDD/ZMTBDD diagrams where appropriate
 
 Notes:
 
-- Leave room for a future `VariableKind`.
-- Be careful about accidental mixing of BDD variables and ZDD elements.
+- Leave room for a future `VariableKind` if cross-family naming becomes ambiguous.
+- Be careful about accidental mixing of BDD variables, ZDD elements, and MTBDD/ZMTBDD variables.
 
 ### 5.4 BDD Information Model
 
@@ -527,7 +575,27 @@ ZddManager.Empty
 ZddManager.Base
 ```
 
-### 5.7 Intermediate Table Model
+### 5.7 MTBDD/ZMTBDD Information Model
+
+MTBDD and ZMTBDD diagrams operate over Boolean-domain variables but use integer terminals.
+
+#### MTBDD Terminal
+
+```text
+terminal = integer value
+```
+
+MTBDD terminal values are part of the represented function. The zero terminal means the numeric value `0`.
+
+#### ZMTBDD Terminal
+
+```text
+zero terminal = numeric zero
+```
+
+ZMTBDD uses zero suppression for sparse numeric functions. The zero terminal remains the ordinary numeric value `0`.
+
+### 5.8 Intermediate Table Model
 
 The Export layer should not directly format BDD/ZDD internals. Diagnostics should convert diagrams into intermediate models, and Export should format those models.
 
@@ -552,7 +620,7 @@ Specialized models:
 - `NodeTable`
 - `StatisticsTable`
 
-### 5.8 Include Analysis Information Model
+### 5.9 Include Analysis Information Model
 
 ```csharp
 public readonly record struct IncludeEdge(string From, string To);
@@ -1020,8 +1088,9 @@ Example for `DecisionDiagramSharp.Core` or a single package:
     <PackageId>DecisionDiagramSharp</PackageId>
     <Title>DecisionDiagramSharp</Title>
     <Description>
-      A modern C#/.NET library for BDD, ZDD, MDD and decision diagrams:
-      symbolic Boolean logic, sparse set families, truth tables,
+      A modern C#/.NET library for BDD, ZDD, MTBDD, ZMTBDD,
+      and decision diagrams:
+      symbolic Boolean logic, sparse set families, numeric correction functions, truth tables,
       DOT/CSV/Markdown/AsciiDoc export.
     </Description>
     <Authors>Yuta Urano</Authors>
@@ -1031,9 +1100,11 @@ Example for `DecisionDiagramSharp.Core` or a single package:
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>
-      bdd;zdd;mdd;decision-diagrams;binary-decision-diagram;
-      zero-suppressed-decision-diagram;csharp;dotnet;
-      symbolic-computation;truth-table;graphviz;asciidoc;static-analysis
+      bdd;zdd;mtbdd;zmtbdd;
+      decision-diagrams;binary-decision-diagram;
+      zero-suppressed-decision-diagram;multi-terminal-bdd;csharp;dotnet;
+      symbolic-computation;numeric-correction;calibration-table;
+      approximate-computing;truth-table;graphviz;asciidoc;static-analysis
     </PackageTags>
   </PropertyGroup>
 
@@ -1130,7 +1201,7 @@ External tool policy:
 |        Diagnostics              Export           |
 +--------------------------------------------------+
 |                       Core                       |
-|  Common / BDD / ZDD / future MDD / Manager       |
+|  Common / BDD / ZDD / MTBDD/ZMTBDD / Manager     |
 +--------------------------------------------------+
 |                    .NET BCL                      |
 +--------------------------------------------------+
@@ -1155,7 +1226,7 @@ Logical layers and target framework boundaries are separated.
 |              netstandard2.0                      |
 +--------------------------------------------------+
 |                       Core                       |
-|  Common / BDD / ZDD / future MDD / Manager       |
+|  Common / BDD / ZDD / MTBDD/ZMTBDD / Manager     |
 |              netstandard2.0                      |
 +--------------------------------------------------+
 |                    .NET BCL                      |
@@ -1229,9 +1300,13 @@ Recommended roadmap:
 | v0.1 | ZDD Foundation |
 | v0.2 | BDD Foundation |
 | v0.3 | Unified Developer Experience |
-| v0.4 | CodeAnalysis Prototype |
-| v0.5 | Conditional Analysis |
-| v0.6+ | MDD / ADD Exploration |
+| v0.4 | MTBDD Baseline |
+| v0.5 | ZMTBDD Baseline |
+| v0.6 | Existing Diagram Refinement and Test Coverage |
+| v0.7 | Usability, Samples, and CodeAnalysis Preparation |
+| v0.8+ | CodeAnalysis / Conditional Analysis |
+
+MDD and ADD / weighted DD are out of the current roadmap.
 
 ### 10.3 Compatibility Policy
 
@@ -1319,13 +1394,14 @@ Expected:
 
 ### 12.2 Extensibility
 
-**Scenario:** Add MDD.
+**Scenario:** Improve MTBDD and ZMTBDD construction APIs.
 
 Expected:
 
-- Add `MddManager` and `Mdd` handle.
-- Add `Mdd` property to `DecisionDiagramManager`.
+- Numeric diagram changes stay localized to `MtbddManager`, `ZmtbddManager`, diagnostics, export, and tests.
 - Existing BDD/ZDD public APIs remain compatible.
+- Core remains free of file I/O and external process dependencies.
+- Benchmarks can compare MTBDD and ZMTBDD construction and evaluation on the same generated functions.
 
 ### 12.3 Readability
 
@@ -1433,10 +1509,12 @@ Reasons:
 |---|---|
 | v0.1 | Core is `netstandard2.0` only. Tests/Samples/Benchmarks are `net8.0` |
 | v0.2 | BDD is added while Core remains `netstandard2.0` |
-| v0.3 | Diagnostics/Export are added as `netstandard2.0` |
-| v0.4 | CodeAnalysis targets `netstandard2.0` or `net8.0` depending on dependencies |
-| v0.5 | Conditional Analysis is added while Core compatibility is preserved |
-| v0.6+ | Multi-targeting with `netstandard2.0;net8.0` may be considered if needed |
+| v0.3 | Unified developer experience is added while library projects remain `netstandard2.0` |
+| v0.4 | MTBDD baseline is added while Core remains `netstandard2.0` |
+| v0.5 | ZMTBDD baseline is added while Core remains `netstandard2.0` |
+| v0.6 | Existing diagram refinement keeps Core `netstandard2.0` |
+| v0.7 | Usability and sample work keeps library projects `netstandard2.0` |
+| v0.8+ | CodeAnalysis and optional multi-targeting may be considered if needed |
 
 ### v0.1: ZDD Foundation
 
@@ -1493,7 +1571,53 @@ Reasons:
 - NuGet metadata
 - Documentation skeleton
 
-### v0.4: CodeAnalysis Prototype
+### v0.4: MTBDD Baseline
+
+- `MtbddManager`
+- `Mtbdd`
+- integer terminals
+- terminal interning
+- reduced ordered construction
+- bounded truth-table construction
+- `Evaluate`
+- DOT output
+- node/value table diagnostics
+- statistics
+- truth-table comparison tests
+- construction/evaluation benchmarks
+
+### v0.5: ZMTBDD Baseline
+
+- ZMTBDD design note
+- zero terminal semantics
+- zero-suppressed reduction rule
+- sparse numeric construction
+- `Evaluate`
+- DOT output
+- node/value table diagnostics
+- statistics
+- naive sparse numeric comparison tests
+- benchmarks against direct MTBDD
+
+### v0.6: Existing Diagram Refinement and Test Coverage
+
+- BDD/ZDD operation test refactoring with clearer purpose comments and shared naive-model helpers
+- v0.1 and v0.2 coverage review, with method-level gaps closed where practical
+- MTBDD/ZMTBDD edge-case tests for construction, evaluation, ownership, validation, and limits
+- diagnostics and export golden-test stabilization for BDD, ZDD, MTBDD, and ZMTBDD
+- benchmark cleanup for BDD `Ite`, ZDD family operations, MTBDD construction/evaluation, and ZMTBDD construction/evaluation
+- documentation updates that describe the current supported diagram set without speculative future types
+
+### v0.7: Usability, Samples, and CodeAnalysis Preparation
+
+- friendlier high-level construction APIs for BDD, ZDD, MTBDD, and ZMTBDD
+- fluent or extension-based helpers where they improve discoverability without hiding manager APIs
+- additional samples for truth-table export, set-family workflows, and numeric diagram evaluation
+- getting-started and API guide refresh based on the refined public surface
+- CLI and CodeAnalysis preparation that does not add dependencies to Core
+- NuGet metadata, README, and docs polish for a cleaner preview package story
+
+### v0.8+: CodeAnalysis Prototype
 
 - `IncludeEdge`
 - `IncludePath`
@@ -1501,19 +1625,18 @@ Reasons:
 - Header contamination ranking
 - Markdown/CSV/AsciiDoc report
 
-### v0.5: Conditional Analysis
+### v0.9+: Conditional Analysis
 
 - BDD build conditions
 - Conditional include edges
 - Feasible path filtering
 - Configuration-aware impact analysis
 
-### v0.6+: MDD / ADD Exploration
+### Out of Current Roadmap: MDD / ADD
 
-- Multi-valued domains
-- Weighted cost analysis
-- Refactoring candidate scoring
-- Optional native backend exploration
+- MDD and ADD / weighted DD are not planned.
+- Do not add speculative abstractions solely for MDD/ADD.
+- Reopen only by explicit project-owner decision.
 
 ---
 
@@ -1523,7 +1646,7 @@ Reasons:
 
 ```text
 Core:
-  Mathematically clear and robust BDD/ZDD/MDD foundations
+  Mathematically clear and robust BDD/ZDD/MTBDD/ZMTBDD foundations
 
 Diagnostics:
   Visualization, truth tables, and set-family display
