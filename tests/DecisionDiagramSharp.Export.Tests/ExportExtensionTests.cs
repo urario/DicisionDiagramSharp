@@ -10,10 +10,10 @@ public sealed class ExportExtensionTests
     /// </summary>
     /// <remarks>
     /// Confirms that high-level BDD export extensions produce meaningful tables from a handle-owned diagram
-    /// without requiring the caller to pass the manager explicitly.
+    /// without requiring the caller to pass the manager explicitly. Tests all three formats.
     /// </remarks>
     [TestMethod]
-    public void BddExportExtensions_FormatTruthTableAndModelsAsMarkdown()
+    public void BddExportExtensions_FormatTruthTableAndModelsInAllFormats()
     {
         // Arrange
         var manager = new BddManager();
@@ -44,9 +44,10 @@ public sealed class ExportExtensionTests
     /// </summary>
     /// <remarks>
     /// Confirms that high-level ZDD export extensions preserve set-family semantics in formatted output.
+    /// Tests all three formats, not just Markdown.
     /// </remarks>
     [TestMethod]
-    public void ZddExportExtensions_FormatSetFamiliesAsMarkdown()
+    public void ZddExportExtensions_FormatSetFamiliesInAllFormats()
     {
         // Arrange
         var manager = new ZddManager();

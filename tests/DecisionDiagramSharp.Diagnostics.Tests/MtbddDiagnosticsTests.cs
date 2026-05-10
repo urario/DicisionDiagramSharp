@@ -8,14 +8,14 @@ namespace DecisionDiagramSharp.Diagnostics.Tests;
 public sealed class MtbddDiagnosticsTests
 {
     /// <summary>
-    /// Verifies that MTBDD diagnostics expose DOT, node, value, and statistics models with stable observable content.
+    /// Verifies that MTBDD diagnostics expose DOT, node, value, and statistics models with expected observable content.
     /// </summary>
     /// <remarks>
-    /// Confirms that all four diagnostic outputs are deterministic and contain the expected identifiers and values
+    /// Confirms that all four diagnostic outputs contain the expected identifiers, titles, and values
     /// so consumers can embed them in documentation or compare them in golden tests.
     /// </remarks>
     [TestMethod]
-    public void DotNodeValueAndStatisticsTables_AreDeterministic()
+    public void Mtbdd_DotNodeValueAndStatisticsTables_ContainExpectedObservableContent()
     {
         // Arrange
         var manager = new MtbddManager();
@@ -48,7 +48,7 @@ public sealed class MtbddDiagnosticsTests
     /// preventing runaway table generation for large diagrams.
     /// </remarks>
     [TestMethod]
-    public void ValueTable_RespectsBoundsAndValidatesOptions()
+    public void Mtbdd_ValueTable_RespectsBoundsAndValidatesOptions()
     {
         // Arrange
         var manager = new MtbddManager();

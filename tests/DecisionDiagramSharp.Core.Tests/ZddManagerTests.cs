@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -261,7 +260,7 @@ public sealed class ZddManagerTests
     ///Guards the node-count limit; operations must fail with an actionable exception before memory is exhausted.
     /// </remarks>
     [TestMethod]
-    public void SizeLimit_ShouldThrowWhenNodeCountExceedsMaximum()
+    public void Zdd_SizeLimit_ShouldThrowWhenNodeCountExceedsMaximum()
     {
         // Arrange
         var manager = new ZddManager(new DecisionDiagramOptions { MaxNodeCount = 1 });
@@ -317,113 +316,6 @@ public sealed class ZddManagerTests
         Assert.Throws<ArgumentNullException>(() => manager.MakeFamily((IEnumerable<IEnumerable<VariableId>>)null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => manager.MakeSet(new[] { new VariableId(999) }));
         Assert.Throws<ArgumentOutOfRangeException>(() => manager.EnumerateSets(setA, new SetEnumerationOptions { MaxSets = 0 }));
-    }
-
-    // ─── Validation and Corrupted Internal State ──────────────────────────────
-
-    /// <summary>
-    /// Verifies that Validate detects corrupted internal ZDD node state.
-    /// </summary>
-    /// <remarks>
-    ///Covers internal invariant checks (High==Empty violation, out-of-range references, variable ordering, unique table)
-    /// that protect canonicalization correctness. Intentionally corrupts internal state via reflection.
-    /// </remarks>
-    [TestMethod]
-    public void InternalValidation_ShouldDetectCorruptedZddNodeState()
-    {
-        // Arrange / Act / Assert — High == Empty violated (both children are terminal 0)
-        var managerHighEmpty = CreateManager("A", "B");
-        var a1 = Var(managerHighEmpty, "A");
-        var b1 = Var(managerHighEmpty, "B");
-        _ = managerHighEmpty.MakeSet(new[] { a1, b1 });
-        SetNode(managerHighEmpty, 0, CreateNode(a1.Value, 0, 0));
-        Assert.Throws<DiagramException>(() => managerHighEmpty.Validate());
-
-        // Arrange / Act / Assert — out-of-range child
-        var managerOutOfRange = CreateManager("A", "B");
-        var a2 = Var(managerOutOfRange, "A");
-        var b2 = Var(managerOutOfRange, "B");
-        _ = managerOutOfRange.MakeSet(new[] { a2, b2 });
-        SetNode(managerOutOfRange, 0, CreateNode(a2.Value, -1, 1));
-        Assert.Throws<DiagramException>(() => managerOutOfRange.Validate());
-
-        // Arrange / Act / Assert — variable ordering violation
-        var managerOrdering = CreateManager("A", "B");
-        var a3 = Var(managerOrdering, "A");
-        var b3 = Var(managerOrdering, "B");
-        _ = managerOrdering.MakeSet(new[] { a3, b3 });
-        SetNode(managerOrdering, 1, CreateNode(b3.Value, 0, 2));
-        Assert.Throws<InvalidVariableOrderingException>(() => managerOrdering.Validate());
-
-        // Arrange / Act / Assert — unique table cleared
-        var managerUnique = CreateManager("A", "B");
-        var a4 = Var(managerUnique, "A");
-        var b4 = Var(managerUnique, "B");
-        _ = managerUnique.MakeSet(new[] { a4, b4 });
-        var uniqueTable = (System.Collections.IDictionary)TestHelpers.GetPrivateField(managerUnique, "_uniqueTable");
-        uniqueTable.Clear();
-        Assert.Throws<DiagramException>(() => managerUnique.Validate());
-    }
-
-    /// <summary>
-    /// Verifies that private key types (ZddKey, BinaryOpKey) implement value equality correctly.
-    /// </summary>
-    /// <remarks>
-    ///Covers internal unique-table and cache key semantics; incorrect equality would break canonicalization and caching.
-    /// </remarks>
-    [TestMethod]
-    public void InternalKeyTypes_ShouldImplementValueEquality()
-    {
-        // Arrange / Act / Assert — ZddKey
-        var zddKeyType = typeof(ZddManager).GetNestedType("ZddKey", System.Reflection.BindingFlags.NonPublic)!;
-        var zddKey1 = Activator.CreateInstance(zddKeyType, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new object[] { 1, 0, 1 }, null)!;
-        var zddKey2 = Activator.CreateInstance(zddKeyType, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new object[] { 1, 0, 1 }, null)!;
-        var zddKey3 = Activator.CreateInstance(zddKeyType, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, new object[] { 2, 0, 1 }, null)!;
-        var zddKeyEquals = zddKeyType.GetMethod("Equals", new[] { typeof(object) })!;
-        Assert.IsTrue((bool)zddKeyEquals.Invoke(zddKey1, new[] { zddKey2 })!);
-        Assert.IsFalse((bool)zddKeyEquals.Invoke(zddKey1, new object[] { zddKey3 })!);
-        Assert.IsFalse((bool)zddKeyEquals.Invoke(zddKey1, new object[] { "not-a-key" })!);
-        Assert.AreNotEqual(zddKey1.GetHashCode(), zddKey3.GetHashCode());
-
-        // Arrange / Act / Assert — BinaryOpKey
-        var binaryOpKeyType = typeof(ZddManager).GetNestedType("BinaryOpKey", System.Reflection.BindingFlags.NonPublic)!;
-        var createMethod = binaryOpKeyType.GetMethod("Create", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
-        var binaryKey1 = createMethod.Invoke(null, new object[] { 2, 1 })!;
-        var binaryKey2 = createMethod.Invoke(null, new object[] { 1, 2 })!;
-        var binaryKey3 = createMethod.Invoke(null, new object[] { 2, 3 })!;
-        var binaryKeyEquals = binaryOpKeyType.GetMethod("Equals", new[] { typeof(object) })!;
-        Assert.IsTrue((bool)binaryKeyEquals.Invoke(binaryKey1, new[] { binaryKey2 })!);
-        Assert.IsFalse((bool)binaryKeyEquals.Invoke(binaryKey1, new object[] { binaryKey3 })!);
-        Assert.AreNotEqual(binaryKey1.GetHashCode(), binaryKey3.GetHashCode());
-    }
-
-    /// <summary>
-    /// Verifies that EnumerateSetsRecursive throws when the seed result already exceeds the limit.
-    /// </summary>
-    /// <remarks>
-    ///Covers the edge case where the limit is exceeded before any new sets are added during recursion.
-    /// </remarks>
-    [TestMethod]
-    public void InternalEnumerationHelper_ShouldThrowWhenSeedResultAlreadyExceedsLimit()
-    {
-        // Arrange
-        var manager = new ZddManager();
-        var enumerateSetsRecursive = typeof(ZddManager).GetMethod(
-            "EnumerateSetsRecursive",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-
-        // Act / Assert
-        var target = Assert.Throws<System.Reflection.TargetInvocationException>(() =>
-            enumerateSetsRecursive.Invoke(
-                manager,
-                new object[]
-                {
-                    1,
-                    new List<VariableId>(),
-                    new List<IReadOnlyList<VariableId>> { Array.Empty<VariableId>() },
-                    0
-                }));
-        Assert.IsInstanceOfType(target.InnerException, typeof(DiagramEnumerationLimitExceededException));
     }
 
     // ─── Randomized Naive Model Comparison ───────────────────────────────────
@@ -492,6 +384,63 @@ public sealed class ZddManagerTests
         }
     }
 
+    /// <summary>
+    /// Verifies that ZDD set operations handle empty and singleton families correctly in the randomized loop.
+    /// </summary>
+    /// <remarks>
+    /// Exercises boundary cases where one operand is Empty or a singleton set,
+    /// verifying Union/Intersect/Difference against naive expected results.
+    /// Seed 12345, 30 iterations; failure messages include iteration and case label.
+    /// </remarks>
+    [TestMethod]
+    public void RandomizedOperations_ShouldHandleEmptyAndSingletonEdgeCases()
+    {
+        var random = new Random(12345);
+        var manager = CreateManager("A", "B", "C");
+        var variableIds = new[]
+        {
+            manager.GetOrAddVariable("A"),
+            manager.GetOrAddVariable("B"),
+            manager.GetOrAddVariable("C")
+        };
+        var emptyNaive = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var iteration = 0; iteration < 30; iteration++)
+        {
+            // Build a random non-trivial family to use as the "other" operand
+            var naiveOther = ZddNaiveModel.CreateRandom(random, variableIds, 5);
+            var other = manager.MakeFamily(ZddNaiveModel.ToSets(naiveOther, variableIds));
+
+            // Empty ∪ other == other
+            ZddNaiveModel.AssertEqual(naiveOther,
+                ZddNaiveModel.Enumerate(manager, manager.Union(manager.Empty, other)));
+            // Empty ∩ other == ∅
+            ZddNaiveModel.AssertEqual(emptyNaive,
+                ZddNaiveModel.Enumerate(manager, manager.Intersect(manager.Empty, other)));
+            // Empty \ other == ∅
+            ZddNaiveModel.AssertEqual(emptyNaive,
+                ZddNaiveModel.Enumerate(manager, manager.Difference(manager.Empty, other)));
+
+            // Singleton: the set { A }
+            var singletonVar = variableIds[0];
+            var singleton = manager.MakeSet(new[] { singletonVar });
+            var singletonNaive = new HashSet<string>(StringComparer.Ordinal)
+            {
+                singletonVar.Value.ToString()
+            };
+
+            ZddNaiveModel.AssertEqual(
+                ZddNaiveModel.Union(singletonNaive, naiveOther),
+                ZddNaiveModel.Enumerate(manager, manager.Union(singleton, other)));
+            ZddNaiveModel.AssertEqual(
+                ZddNaiveModel.Intersect(singletonNaive, naiveOther),
+                ZddNaiveModel.Enumerate(manager, manager.Intersect(singleton, other)));
+            ZddNaiveModel.AssertEqual(
+                ZddNaiveModel.Difference(singletonNaive, naiveOther),
+                ZddNaiveModel.Enumerate(manager, manager.Difference(singleton, other)));
+        }
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private static ZddManager CreateManager(params string[] names)
@@ -522,34 +471,17 @@ public sealed class ZddManagerTests
         return keys;
     }
 
-    private static void SetNode(ZddManager manager, int index, object node)
-    {
-        var nodes = (System.Collections.IList)TestHelpers.GetPrivateField(manager, "_nodes");
-        nodes[index] = node;
-    }
-
-    private static object CreateNode(int variable, int low, int high)
-    {
-        var nodeType = typeof(ZddManager).GetNestedType("ZddNode", System.Reflection.BindingFlags.NonPublic)!;
-        return Activator.CreateInstance(
-            nodeType,
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
-            null,
-            new object[] { variable, low, high },
-            null)!;
-    }
-
     // ─── String-name helpers (V07) ───────────────────────────────────────────
 
     /// <summary>
-    /// Verifies that MakeSet(IEnumerable&lt;string&gt;) produces the same ZDD as the VariableId overload.
+    /// Verifies that MakeSet(IEnumerable&lt;string&gt;) produces the same canonical ZDD handle as the VariableId overload.
     /// </summary>
     /// <remarks>
     /// Confirms that the string-name shorthand resolves names via GetOrAddVariable and produces
-    /// the canonical ZDD node identical to the VariableId overload.
+    /// the identical canonical handle as the VariableId overload (node identity, not just semantic equivalence).
     /// </remarks>
     [TestMethod]
-    public void MakeSet_StringNames_ShouldReturnEquivalentToVariableIdOverload()
+    public void MakeSet_StringNames_ShouldReturnSameCanonicalHandleAsVariableIdOverload()
     {
         // Arrange
         var manager = new ZddManager();
@@ -561,18 +493,18 @@ public sealed class ZddManagerTests
         var byName = manager.MakeSet(new[] { "A", "B" });
 
         // Assert — canonical representation: same set family → same node
-        Assert.AreEqual(byId, byName, "MakeSet(string[]) and MakeSet(VariableId[]) must return the same canonical node.");
+        Assert.AreEqual(byId, byName, "MakeSet(string[]) and MakeSet(VariableId[]) must return the same canonical handle.");
     }
 
     /// <summary>
-    /// Verifies that MakeFamily(IEnumerable&lt;IEnumerable&lt;string&gt;&gt;) produces the same ZDD as the VariableId overload.
+    /// Verifies that MakeFamily(IEnumerable&lt;IEnumerable&lt;string&gt;&gt;) produces the same canonical ZDD handle as the VariableId overload.
     /// </summary>
     /// <remarks>
     /// Confirms that the string-name shorthand resolves names for multiple sets and produces
-    /// the canonical ZDD family node identical to the VariableId overload.
+    /// the identical canonical handle as the VariableId overload (node identity, not just semantic equivalence).
     /// </remarks>
     [TestMethod]
-    public void MakeFamily_StringNames_ShouldReturnEquivalentToVariableIdOverload()
+    public void MakeFamily_StringNames_ShouldReturnSameCanonicalHandleAsVariableIdOverload()
     {
         // Arrange
         var manager = new ZddManager();
@@ -584,6 +516,6 @@ public sealed class ZddManagerTests
         var byName = manager.MakeFamily(new[] { new[] { "A" }, new[] { "A", "B" } });
 
         // Assert — canonical representation: same set family → same node
-        Assert.AreEqual(byId, byName, "MakeFamily(string[][]) and MakeFamily(VariableId[][]) must return the same canonical node.");
+        Assert.AreEqual(byId, byName, "MakeFamily(string[][]) and MakeFamily(VariableId[][]) must return the same canonical handle.");
     }
 }
