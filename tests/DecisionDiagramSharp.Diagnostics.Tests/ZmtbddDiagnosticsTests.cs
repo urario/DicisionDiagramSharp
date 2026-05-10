@@ -7,10 +7,16 @@ namespace DecisionDiagramSharp.Diagnostics.Tests;
 [TestClass]
 public sealed class ZmtbddDiagnosticsTests
 {
+    /// <summary>
+    /// Verifies that ZMTBDD diagnostics expose DOT, node, value, and statistics models with stable observable content.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that all four diagnostic outputs are deterministic and contain the expected identifiers and values
+    /// so consumers can embed them in documentation or compare them in golden tests.
+    /// </remarks>
     [TestMethod]
     public void DotNodeValueAndStatisticsTables_AreDeterministic()
     {
-        // Purpose: Verify ZMTBDD diagnostics expose DOT, node, value, and statistics models with stable observable content.
         // Arrange
         var manager = new ZmtbddManager();
         manager.GetOrAddVariable("A");
@@ -34,17 +40,23 @@ public sealed class ZmtbddDiagnosticsTests
         Assert.AreEqual("ZMTBDD Statistics", stats.Title);
     }
 
+    /// <summary>
+    /// Verifies that the ZMTBDD value table respects variable and row bounds and validates options.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that ZMTBDD value-table diagnostics use bounded-enumeration safety rules,
+    /// preventing runaway table generation for large diagrams.
+    /// </remarks>
     [TestMethod]
     public void ValueTable_RespectsBoundsAndValidatesOptions()
     {
-        // Purpose: Verify ZMTBDD value-table diagnostics use bounded-enumeration safety rules.
         // Arrange
         var manager = new ZmtbddManager();
         manager.GetOrAddVariable("A");
         manager.GetOrAddVariable("B");
         var function = manager.Create(new[] { 1, 0, 0, 4 });
 
-        // Act and Assert
+        // Act / Assert
         Assert.Throws<DiagramEnumerationLimitExceededException>(
             () => ZmtbddDiagnostics.BuildValueTable(manager, function, new TruthTableOptions { MaxVariables = 1, MaxRows = 4 }));
         Assert.Throws<DiagramEnumerationLimitExceededException>(

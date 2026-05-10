@@ -5,10 +5,16 @@ namespace DecisionDiagramSharp.Export.Tests;
 [TestClass]
 public sealed class ExportExtensionTests
 {
+    /// <summary>
+    /// Verifies that BDD export extension methods produce correctly formatted Markdown, CSV, and AsciiDoc outputs.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that high-level BDD export extensions produce meaningful tables from a handle-owned diagram
+    /// without requiring the caller to pass the manager explicitly.
+    /// </remarks>
     [TestMethod]
     public void BddExportExtensions_FormatTruthTableAndModelsAsMarkdown()
     {
-        // Purpose: verifies that high-level BDD export extensions produce meaningful tables from a handle-owned diagram.
         // Arrange
         var manager = new BddManager();
         var a = manager.GetOrAddVariable("A");
@@ -33,10 +39,15 @@ public sealed class ExportExtensionTests
         StringAssert.Contains(modelsAsciiDoc, "|Index |A");
     }
 
+    /// <summary>
+    /// Verifies that ZDD export extension methods produce correctly formatted Markdown, CSV, and AsciiDoc outputs.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that high-level ZDD export extensions preserve set-family semantics in formatted output.
+    /// </remarks>
     [TestMethod]
     public void ZddExportExtensions_FormatSetFamiliesAsMarkdown()
     {
-        // Purpose: verifies that high-level ZDD export extensions preserve set-family semantics in formatted output.
         // Arrange
         var manager = new ZddManager();
         var a = manager.GetOrAddVariable("A");

@@ -9,10 +9,16 @@ namespace DecisionDiagramSharp.Core.Tests;
 [TestClass]
 public sealed class ZmtbddManagerTests
 {
+    /// <summary>
+    /// Verifies that ZMTBDD construction preserves sparse integer truth-table values under zero-suppressed semantics.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that Create maps each assignment to the expected sparse integer value for all 8 assignments;
+    /// non-zero entries must survive and zero entries must be handled by zero-suppression.
+    /// </remarks>
     [TestMethod]
     public void CreateAndEvaluate_MatchesSparseIntegerTruthTable()
     {
-        // Purpose: Verify ZMTBDD construction preserves sparse integer truth-table values under zero-suppressed semantics.
         // Arrange
         var manager = CreateThreeVariableManager(out var variables);
         var values = new[] { 5, 0, 0, -2, 0, 0, 3, 0 };
@@ -23,14 +29,21 @@ public sealed class ZmtbddManagerTests
         // Assert
         for (var mask = 0; mask < values.Length; mask++)
         {
-            Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)));
+            Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)),
+                $"mask={mask}: Evaluate must return the sparse truth-table value.");
         }
     }
 
+    /// <summary>
+    /// Verifies that ZMTBDD uses High==0 suppression and differs from MTBDD Low==High reduction.
+    /// </summary>
+    /// <remarks>
+    /// Confirms the defining behavioral difference: ZMTBDD suppresses branches whose High child is the zero terminal,
+    /// whereas MTBDD would keep a node where Low==High but both are non-zero.
+    /// </remarks>
     [TestMethod]
     public void ZeroSuppression_RemovesHighZeroBranchButKeepsLowEqualsHighBranch()
     {
-        // Purpose: Verify ZMTBDD uses High == 0 suppression and intentionally differs from MTBDD Low == High reduction.
         // Arrange
         var highZero = new ZmtbddManager();
         var a = highZero.GetOrAddVariable("A");
@@ -47,10 +60,12 @@ public sealed class ZmtbddManagerTests
         var trueB = lowEqualsHigh.Evaluate(lowEqualsHighFunction, new Dictionary<VariableId, bool> { { b, true } });
 
         // Assert
-        Assert.AreEqual(0, highZero.NonTerminalNodeCount);
+        Assert.AreEqual(0, highZero.NonTerminalNodeCount,
+            "High==0 suppression must eliminate the A node for [7, 0].");
         Assert.AreEqual(7, falseA);
         Assert.AreEqual(0, trueA);
-        Assert.AreEqual(1, lowEqualsHigh.NonTerminalNodeCount);
+        Assert.AreEqual(1, lowEqualsHigh.NonTerminalNodeCount,
+            "Low==High does not suppress when both are non-zero; B node must remain for [5, 5].");
         Assert.AreEqual(5, falseB);
         Assert.AreEqual(5, trueB);
         Assert.IsTrue(highZeroFunction.IsTerminal);
@@ -58,10 +73,16 @@ public sealed class ZmtbddManagerTests
         _ = highZeroFunction.GetHashCode();
     }
 
+    /// <summary>
+    /// Verifies that ZMTBDD typed handles, diagnostics views, statistics, and validation form a coherent public API.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that all structural-inspection APIs return consistent results for the same function
+    /// and that the Validate method accepts a correct diagram without throwing.
+    /// </remarks>
     [TestMethod]
     public void Handles_NodeViews_Statistics_AndValidation_Work()
     {
-        // Purpose: Verify ZMTBDD typed handles, diagnostics views, statistics, and validation form a coherent public API.
         // Arrange
         var manager = CreateThreeVariableManager(out _);
         var values = new[] { 0, 1, 0, 1, 2, 0, 2, 0 };
@@ -98,17 +119,22 @@ public sealed class ZmtbddManagerTests
         Assert.AreEqual(first.HighNodeId, copy.HighNodeId);
     }
 
+    /// <summary>
+    /// Verifies that ZMTBDD rejects malformed truth tables, assignments, variables, and cross-manager handles.
+    /// </summary>
+    /// <remarks>
+    /// Guards all API contract violations so callers receive actionable exceptions rather than silent failures.
+    /// </remarks>
     [TestMethod]
     public void InvalidInputsAndManagerMismatch_ThrowActionableExceptions()
     {
-        // Purpose: Verify ZMTBDD rejects malformed truth tables, assignments, variables, and cross-manager handles.
         // Arrange
         var left = CreateThreeVariableManager(out var variables);
         var right = CreateThreeVariableManager(out _);
         var leftFunction = left.Create(new[] { 1, 0, 0, 4, 0, 0, 7, 0 });
         var rightFunction = right.Constant(1);
 
-        // Act and Assert
+        // Act / Assert
         Assert.Throws<ArgumentNullException>(() => left.GetOrAddVariable(null!));
         Assert.Throws<ArgumentNullException>(() => left.Create(null!));
         Assert.Throws<ArgumentException>(() => left.Create(new[] { 1, 2, 3 }));
@@ -121,46 +147,59 @@ public sealed class ZmtbddManagerTests
         Assert.Throws<ArgumentException>(() => left.GetTerminalValueByNodeId(GetNodeId(leftFunction)));
     }
 
+    /// <summary>
+    /// Verifies that ZMTBDD enforces node limits and catches corrupted internal invariants during validation.
+    /// </summary>
+    /// <remarks>
+    /// Confirms DiagramSizeLimitExceededException fires before memory is exhausted, and that Validate
+    /// detects High==0 violations, out-of-range references, ordering violations, and unique-table corruption.
+    /// </remarks>
     [TestMethod]
     public void SizeLimitAndCorruptedStateValidation_Throw()
     {
-        // Purpose: Verify ZMTBDD enforces node limits and catches corrupted internal invariants during validation.
-        // Arrange
+        // Arrange / Act / Assert — size limit
         var limited = new ZmtbddManager(new DecisionDiagramOptions { MaxNodeCount = 0 });
         limited.GetOrAddVariable("A");
-
-        // Act and Assert
         Assert.Throws<DiagramSizeLimitExceededException>(() => limited.Create(new[] { 1, 1 }));
 
+        // Arrange / Act / Assert — High == 0 invariant
         var highZero = CreateThreeVariableManager(out var variables);
         _ = highZero.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
         SetNode(highZero, 0, CreateNode(variables[0].Value, -1, -1));
         Assert.Throws<DiagramException>(() => highZero.Validate());
 
+        // Arrange / Act / Assert — out-of-range child
         var outOfRange = CreateThreeVariableManager(out var outOfRangeVariables);
         _ = outOfRange.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
         SetNode(outOfRange, 0, CreateNode(outOfRangeVariables[0].Value, -999, -1));
         Assert.Throws<DiagramException>(() => outOfRange.Validate());
 
+        // Arrange / Act / Assert — variable ordering violation
         var ordering = CreateThreeVariableManager(out var orderingVariables);
         _ = ordering.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
         SetNode(ordering, 0, CreateNode(orderingVariables[1].Value, 1, -2));
         Assert.Throws<InvalidVariableOrderingException>(() => ordering.Validate());
 
+        // Arrange / Act / Assert — unique table cleared
         var unique = CreateThreeVariableManager(out _);
         _ = unique.Create(new[] { 0, 1, 0, 1, 2, 0, 2, 0 });
-        ((IDictionary)GetPrivateField(unique, "_uniqueTable")).Clear();
+        ((IDictionary)TestHelpers.GetPrivateField(unique, "_uniqueTable")).Clear();
         Assert.Throws<DiagramException>(() => unique.Validate());
     }
 
+    /// <summary>
+    /// Verifies that ZMTBDD construction matches naive sparse truth tables over many randomized inputs.
+    /// </summary>
+    /// <remarks>
+    /// Provides broad behavioral coverage for Create and Evaluate across 50 randomly generated
+    /// three-variable sparse integer functions; catches systematic zero-suppression errors.
+    /// </remarks>
     [TestMethod]
     public void RandomizedConstruction_MatchesNaiveSparseTruthTables()
     {
-        // Purpose: Verify ZMTBDD construction against many small generated sparse integer truth tables.
         // Arrange
         var random = new Random(20260508);
 
-        // Act and Assert
         for (var iteration = 0; iteration < 50; iteration++)
         {
             var manager = CreateThreeVariableManager(out var variables);
@@ -170,38 +209,33 @@ public sealed class ZmtbddManagerTests
                 values[mask] = random.NextDouble() < 0.55d ? 0 : random.Next(-3, 4);
             }
 
+            // Act
             var function = manager.Create(values);
+
+            // Assert
             for (var mask = 0; mask < values.Length; mask++)
             {
-                Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)));
+                Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)),
+                    $"iteration={iteration}, mask={mask}: Evaluate must return the sparse truth-table value.");
             }
         }
     }
 
+    /// <summary>
+    /// Verifies that ZMTBDD private unique-table key implements value equality used by canonicalization.
+    /// </summary>
+    /// <remarks>
+    /// Covers the ZmtbddKey struct's Equals and GetHashCode methods; incorrect equality would break
+    /// unique-table lookups and produce duplicate canonical nodes.
+    /// </remarks>
     [TestMethod]
     public void PrivateKeyTypes_ObjectEqualsAndHashCode_Work()
     {
-        // Purpose: Verify ZMTBDD private unique-table keys preserve value equality semantics used by canonicalization.
         // Arrange
         var keyType = typeof(ZmtbddManager).GetNestedType("ZmtbddKey", BindingFlags.NonPublic)!;
-        var first = Activator.CreateInstance(
-            keyType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[] { 1, -1, -2 },
-            null)!;
-        var second = Activator.CreateInstance(
-            keyType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[] { 1, -1, -2 },
-            null)!;
-        var third = Activator.CreateInstance(
-            keyType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[] { 2, -1, -2 },
-            null)!;
+        var first = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 1, -1, -2 }, null)!;
+        var second = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 1, -1, -2 }, null)!;
+        var third = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 2, -1, -2 }, null)!;
 
         // Act
         var equalsObject = keyType.GetMethod("Equals", new[] { typeof(object) })!;
@@ -211,6 +245,90 @@ public sealed class ZmtbddManagerTests
         Assert.IsFalse((bool)equalsObject.Invoke(first, new[] { third })!);
         Assert.IsFalse((bool)equalsObject.Invoke(first, new object[] { "not-a-key" })!);
         Assert.AreNotEqual(first.GetHashCode(), third.GetHashCode());
+    }
+
+    /// <summary>
+    /// Verifies that a ZMTBDD function with all-zero values reduces to the zero terminal only.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that an all-zero function collapses to a single terminal, validating the
+    /// zero-suppressed reduction property at its extreme case.
+    /// </remarks>
+    [TestMethod]
+    public void AllZeroFunction_ShouldBeZeroTerminalOnly()
+    {
+        // Arrange
+        var manager = new ZmtbddManager();
+        manager.GetOrAddVariable("A");
+        manager.GetOrAddVariable("B");
+
+        // Act — all rows are zero
+        var function = manager.Create(new[] { 0, 0, 0, 0 });
+        var stats = manager.GetStatistics(function);
+
+        // Assert
+        Assert.IsTrue(function.IsZero,
+            "All-zero function must reduce to the zero terminal.");
+        Assert.AreEqual(0, stats.ReachableNodeCount,
+            "No non-terminal nodes should exist for an all-zero function.");
+    }
+
+    /// <summary>
+    /// Verifies that a ZMTBDD constant non-zero function evaluates correctly for all assignments
+    /// and retains internal nodes because ZMTBDD only suppresses High==Zero.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that ZMTBDD does NOT apply the Low==High reduction used by MTBDD.
+    /// ZMTBDD only suppresses nodes whose high child is the zero terminal.
+    /// A function mapping all assignments to 5 has non-zero High edges and therefore keeps its internal nodes.
+    /// All four evaluations must return 5.
+    /// </remarks>
+    [TestMethod]
+    public void ConstantNonZeroFunction_ShouldEvaluateToConstantForAllAssignments()
+    {
+        // Arrange
+        var manager = new ZmtbddManager();
+        var a = manager.GetOrAddVariable("A");
+        var b = manager.GetOrAddVariable("B");
+
+        // Act — all rows are 5; ZMTBDD retains nodes because High != Zero
+        var function = manager.Create(new[] { 5, 5, 5, 5 });
+
+        // Assert — every assignment evaluates to 5
+        Assert.AreEqual(5, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, false }, { b, false } }));
+        Assert.AreEqual(5, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, true },  { b, false } }));
+        Assert.AreEqual(5, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, false }, { b, true  } }));
+        Assert.AreEqual(5, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, true },  { b, true  } }));
+    }
+
+    /// <summary>
+    /// Verifies that a ZMTBDD function with a single non-zero entry produces a minimal sparse structure.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that zero-suppression produces a smaller representation than a dense MTBDD would for the same function.
+    /// The input [7, 0, 0, 0] has only one non-zero entry; all four evaluations must be correct.
+    /// </remarks>
+    [TestMethod]
+    public void SingleNonZeroEntry_ShouldProduceMinimalSparseStructure()
+    {
+        // Arrange
+        var manager = new ZmtbddManager();
+        var a = manager.GetOrAddVariable("A");
+        var b = manager.GetOrAddVariable("B");
+
+        // Act — only A=false, B=false → 7; all other assignments → 0
+        var function = manager.Create(new[] { 7, 0, 0, 0 });
+        var stats = manager.GetStatistics(function);
+
+        // Assert — correct evaluation for all 4 assignments
+        Assert.AreEqual(7, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, false }, { b, false } }));
+        Assert.AreEqual(0, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, true },  { b, false } }));
+        Assert.AreEqual(0, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, false }, { b, true  } }));
+        Assert.AreEqual(0, manager.Evaluate(function, new Dictionary<VariableId, bool> { { a, true },  { b, true  } }));
+
+        // Assert — node count is reduced compared to a dense representation
+        Assert.IsLessThan(3, stats.ReachableNodeCount,
+            "Single non-zero entry should produce a smaller structure than a fully dense two-variable ZMTBDD.");
     }
 
     private static ZmtbddManager CreateThreeVariableManager(out VariableId[] variables)
@@ -227,13 +345,7 @@ public sealed class ZmtbddManagerTests
 
     private static Dictionary<VariableId, bool> BuildAssignment(IReadOnlyList<VariableId> variables, int mask)
     {
-        var assignment = new Dictionary<VariableId, bool>();
-        for (var i = 0; i < variables.Count; i++)
-        {
-            assignment[variables[i]] = (mask & (1 << i)) != 0;
-        }
-
-        return assignment;
+        return TestHelpers.BuildBoolAssignment(variables, mask);
     }
 
     private static int GetNodeId(Zmtbdd value)
@@ -244,7 +356,7 @@ public sealed class ZmtbddManagerTests
 
     private static void SetNode(ZmtbddManager manager, int index, object node)
     {
-        var nodes = (IList)GetPrivateField(manager, "_nodes");
+        var nodes = (IList)TestHelpers.GetPrivateField(manager, "_nodes");
         nodes[index] = node;
     }
 
@@ -257,11 +369,5 @@ public sealed class ZmtbddManagerTests
             null,
             new object[] { variable, low, high },
             null)!;
-    }
-
-    private static object GetPrivateField(object target, string fieldName)
-    {
-        var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!;
-        return field.GetValue(target)!;
     }
 }

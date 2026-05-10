@@ -5,10 +5,16 @@ namespace DecisionDiagramSharp.Core.Tests;
 [TestClass]
 public sealed class DecisionDiagramManagerTests
 {
+    /// <summary>
+    /// Verifies that the unified manager exposes separate diagram managers sharing a single options instance.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that BDD, ZDD, MTBDD, and ZMTBDD managers are accessible via the facade
+    /// and that all share the same DecisionDiagramOptions reference passed at construction.
+    /// </remarks>
     [TestMethod]
     public void UnifiedManager_ExposesSeparateManagersWithSharedOptions()
     {
-        // Purpose: verifies that the unified manager improves discovery while preserving separate diagram semantics.
         // Arrange
         var options = new DecisionDiagramOptions { MaxNodeCount = 16 };
 
@@ -35,10 +41,16 @@ public sealed class DecisionDiagramManagerTests
         Assert.AreEqual(0, manager.Zmtbdd.Evaluate(zmtbddValue, new Dictionary<VariableId, bool> { { zmtbddVariable, true } }));
     }
 
+    /// <summary>
+    /// Verifies that the default constructor creates a fully usable facade for all supported diagram families.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that beginners can create one DecisionDiagramManager and immediately build values across
+    /// BDD, ZDD, MTBDD, and ZMTBDD without supplying options.
+    /// </remarks>
     [TestMethod]
     public void UnifiedManager_DefaultConstructorCreatesUsableManagers()
     {
-        // Purpose: proves that beginners can create one facade and immediately build values across supported diagram families.
         // Arrange
         var manager = new DecisionDiagramManager();
 

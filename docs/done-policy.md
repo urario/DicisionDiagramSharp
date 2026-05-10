@@ -89,13 +89,192 @@ A task MUST NOT be marked `Done` if it fails its stated coverage target unless t
 
 For v0.3 and later implementation tasks, unit tests MUST be written for behavior, not merely to execute functions.
 
-Rules:
+The goal is that test code reads as a specification document for the library's public API. A failing test must make it immediately clear which specification was violated and under what input conditions.
 
-- Each test method MUST state its purpose at the beginning of the test body with an English comment such as `// Purpose: ...`.
-- Tests SHOULD be organized in Arrange / Act / Assert form. Explicit `// Arrange`, `// Act`, and `// Assert` comments are preferred when they improve readability.
-- Tests that only mirror implementation steps or call a method without asserting observable behavior are not acceptable.
-- Tests SHOULD include meaningful edge cases, invalid input cases, and ownership/compatibility cases where relevant.
-- Randomized or broad comparison tests MUST still state the semantic property they verify.
+#### 2.3.1 XML Documentation Comments
+
+Every test method MUST have an XML documentation comment with the following structure:
+
+```csharp
+/// <summary>
+/// 概要:
+/// What this test verifies, stated as a specification claim.
+/// </summary>
+/// <remarks>
+/// 狙い:
+/// Which specification this test guards. Why this matters for the library.
+/// What regression this test prevents. Whether this verifies logical semantics,
+/// canonical representation, or API contracts.
+/// </remarks>
+```
+
+The comment MUST describe the specification being verified, not the procedure being executed.
+
+Bad example:
+```csharp
+/// <summary>
+/// Creates A and B and evaluates Or.
+/// </summary>
+```
+
+Good example:
+```csharp
+/// <summary>
+/// 概要:
+/// Verifies that compound Boolean expression evaluation matches an explicit truth table.
+/// </summary>
+/// <remarks>
+/// 狙い:
+/// Confirms that Evaluate returns specification-correct results for And, Or, Not, and Xor
+/// combinations after BDD construction. By stating expected values as an explicit table
+/// rather than recomputing them, the test reads as a specification document.
+/// </remarks>
+```
+
+The legacy `// Purpose: ...` inline comment is superseded by this XML comment requirement for all new and refactored test methods from v0.6 onward.
+
+#### 2.3.2 Arrange / Act / Assert Structure
+
+Each test MUST be structured with `// Arrange`, `// Act`, and `// Assert` comments. When Act and Assert repeat inside a loop, the overall loop structure must still be readable:
+
+```csharp
+// Arrange
+var cases = new[] { ... };
+
+foreach (var c in cases)
+{
+    // Act
+    var actual = manager.Evaluate(expr, BuildAssignment(c));
+
+    // Assert
+    Assert.AreEqual(c.Expected, actual, $"A={c.A}, B={c.B}");
+}
+```
+
+#### 2.3.3 Test Naming
+
+Test method names MUST express the specification, not just the API name.
+
+Avoid:
+- `Ite_Implies_Equivalent_Restrict_Quantifiers_Work`
+- `EnumerateModels_And_Limits_Work`
+
+Prefer names that encode: what is being tested, under what condition, and what the expected result is:
+- `Implies_ShouldBeEquivalentToNotAOrB`
+- `Restrict_AndByTrueVariable_ShouldReturnRemainingOperand`
+- `EnumerateModels_ShouldThrowWhenModelCountExceedsMaxModels`
+- `BinaryOperation_ShouldThrowWhenManagersDoNotMatch`
+
+#### 2.3.4 One Test, One Specification
+
+Each test method SHOULD verify one specification claim. Tests that bundle multiple independent specifications MUST be split unless the specifications are logically inseparable.
+
+Mandatory split examples:
+- `Ite`, `Implies`, `Equivalent`, `Restrict`, `Exists`, `ForAll` are separate specifications
+- `EnumerateModels` normal path, limit enforcement, and boundary values are separate
+- Manager mismatch, null arguments, unknown VariableId, and missing assignment are separate
+
+#### 2.3.5 Explicit Truth Tables
+
+Tests that verify logical semantics MUST express expected values as explicit case tables, not as recomputed logical expressions.
+
+Avoid:
+```csharp
+var expected = (av && !bv) || (av ^ bv);
+```
+
+Prefer:
+```csharp
+var cases = new[]
+{
+    new { A = false, B = false, Expected = false },
+    new { A = true,  B = false, Expected = true  },
+    new { A = false, B = true,  Expected = true  },
+    new { A = true,  B = true,  Expected = false },
+};
+```
+
+Computing expected values with the same logic as the implementation under test makes the test unable to catch the most common bugs.
+
+#### 2.3.6 Failure Messages
+
+Assert calls in truth-table tests and multi-case loops MUST include a failure message that contains:
+- The input values in specification terms (not as a bit mask)
+- The expected value
+- Which specification case was violated
+
+```csharp
+Assert.AreEqual(
+    c.Expected,
+    actual,
+    $"A={c.A}, B={c.B}: result should match the explicit truth table.");
+```
+
+#### 2.3.7 Logical Equivalence vs. Node Identity
+
+Tests MUST distinguish between two different properties:
+
+1. **Logical equivalence**: the BDD represents the same Boolean function. Verify using `Evaluate` or `Equivalent`.
+2. **Canonical representation**: the same Boolean function produces the same BDD node (reduced ordered BDD property). Verify using `Assert.AreEqual(node1, node2)`.
+
+When `Assert.AreEqual` compares two `Bdd` values, the XML comment MUST state whether the test is asserting logical equivalence or canonical node identity.
+
+#### 2.3.8 EnumerateModels Don't-Care Specification
+
+Tests for `EnumerateModels` MUST explicitly verify the don't-care variable expansion behavior:
+
+- Variables not appearing in the expression are still included in each model
+- Both `true` and `false` assignments for don't-care variables appear in the enumerated set
+- The total model count matches the expected count including don't-care expansions
+- Assertions MUST NOT depend on enumeration order
+
+#### 2.3.9 Exception Tests as API Contracts
+
+Exception tests MUST read as API contract specifications. The XML comment MUST name the specific input contract being violated. Required cases for BDD/ZDD managers:
+
+- Cross-manager operands: `DiagramManagerMismatchException`
+- Null string variable name: `ArgumentNullException`
+- Unknown `VariableId`: `ArgumentOutOfRangeException`
+- Missing assignment entry: `ArgumentException`
+- Null assignment dictionary: `ArgumentNullException`
+- `MaxModels = 0` or negative: `ArgumentOutOfRangeException`
+- Model count exceeds `MaxModels`: `DiagramEnumerationLimitExceededException`
+
+Where the parameter name is a stable public contract, `ArgumentNullException.ParamName` and `ArgumentException.ParamName` SHOULD be verified.
+
+#### 2.3.10 Required Test Coverage Areas
+
+In addition to the above structural rules, BDD and ZDD test suites MUST include tests for the following specification areas. Tests that cover multiple items in one area are acceptable; tests that skip an area entirely are not.
+
+| Area | Key Cases |
+|---|---|
+| **A. Terminals** | `True` / `False` evaluation; `Not(True)`, `Not(False)` |
+| **B. Identity laws** | `A && A == A`; `A \|\| A == A`; `A && False == False`; `A \|\| True == True`; `A && True == A`; `A \|\| False == A`; `A ^ A == False`; `!!A == A` |
+| **C. De Morgan** | `!(A && B) == !A \|\| !B`; `!(A \|\| B) == !A && !B` |
+| **D. Implies / Equivalent** | `A => B == !A \|\| B`; `A <=> B == !(A ^ B)`; self-implication; self-equivalence |
+| **E. ITE** | `Ite(True, X, Y) == X`; `Ite(False, X, Y) == Y`; Restrict selects correct branch |
+| **F. Quantification** | `Exists(A, A && B) == B`; `ForAll(A, A && B) == False`; XOR cases |
+| **G. Restrict** | Restrict And/Or by true/false; variable not in subtree |
+| **H. Canonical form** | Same variable → same node; `A && A == A` canonically; `Ite(A, True, False) == A` |
+| **I. Variable ordering** | Logical result is independent of variable registration order |
+| **J. Extra / missing variables** | Missing required assignment throws; surplus assignments in assignment dictionary |
+| **K. Boundary values** | `MaxModels = 1`; result count equals limit; result count exceeds limit; all null/invalid input cases |
+
+These areas apply to `BddManagerTests.cs`. `ZddManagerTests.cs` MUST cover the equivalent ZDD-specific areas.
+
+#### 2.3.11 Helper Methods
+
+Shared helper methods are encouraged where they eliminate duplication without hiding the specification. Acceptable helpers:
+
+- Manager and variable setup (`CreateManager`, `BuildBoolAssignment`)
+- Explicit truth-table case construction
+- Model enumeration normalization for order-independent comparison
+
+Unacceptable helpers:
+
+- Helpers that encapsulate the expected-value calculation
+- Helpers that make the Assert invisible from the test body
+- Helpers that mix Arrange, Act, and Assert into a single call
 
 ---
 

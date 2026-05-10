@@ -7,10 +7,16 @@ namespace DecisionDiagramSharp.Diagnostics.Tests;
 [TestClass]
 public sealed class MtbddDiagnosticsTests
 {
+    /// <summary>
+    /// Verifies that MTBDD diagnostics expose DOT, node, value, and statistics models with stable observable content.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that all four diagnostic outputs are deterministic and contain the expected identifiers and values
+    /// so consumers can embed them in documentation or compare them in golden tests.
+    /// </remarks>
     [TestMethod]
     public void DotNodeValueAndStatisticsTables_AreDeterministic()
     {
-        // Purpose: Verify MTBDD diagnostics expose DOT, node, value, and statistics models with stable observable content.
         // Arrange
         var manager = new MtbddManager();
         manager.GetOrAddVariable("A");
@@ -34,17 +40,23 @@ public sealed class MtbddDiagnosticsTests
         Assert.AreEqual("MTBDD Statistics", stats.Title);
     }
 
+    /// <summary>
+    /// Verifies that the MTBDD value table respects variable and row bounds and validates options.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that the MTBDD value-table diagnostics use the same bounded-enumeration safety rules as BDD truth tables,
+    /// preventing runaway table generation for large diagrams.
+    /// </remarks>
     [TestMethod]
     public void ValueTable_RespectsBoundsAndValidatesOptions()
     {
-        // Purpose: Verify MTBDD value-table diagnostics use the same bounded-enumeration safety rules as BDD truth tables.
         // Arrange
         var manager = new MtbddManager();
         manager.GetOrAddVariable("A");
         manager.GetOrAddVariable("B");
         var function = manager.Create(new[] { 1, 2, 3, 4 });
 
-        // Act and Assert
+        // Act / Assert
         Assert.Throws<DiagramEnumerationLimitExceededException>(
             () => MtbddDiagnostics.BuildValueTable(manager, function, new TruthTableOptions { MaxVariables = 1, MaxRows = 4 }));
         Assert.Throws<DiagramEnumerationLimitExceededException>(

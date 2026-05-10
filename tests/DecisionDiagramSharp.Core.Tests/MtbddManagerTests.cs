@@ -9,10 +9,16 @@ namespace DecisionDiagramSharp.Core.Tests;
 [TestClass]
 public sealed class MtbddManagerTests
 {
+    /// <summary>
+    /// Verifies that MTBDD construction preserves ordinary integer-valued truth-table semantics.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that Create maps each assignment to the expected integer value for all 8 assignments
+    /// of a three-variable function.
+    /// </remarks>
     [TestMethod]
     public void CreateAndEvaluate_MatchesNaiveIntegerTruthTable()
     {
-        // Purpose: Verify that MTBDD construction preserves ordinary integer-valued truth-table semantics.
         // Arrange
         var manager = CreateThreeVariableManager(out var variables);
         var values = new[] { 7, 7, -2, -2, 3, 4, 3, 4 };
@@ -23,14 +29,21 @@ public sealed class MtbddManagerTests
         // Assert
         for (var mask = 0; mask < values.Length; mask++)
         {
-            Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)));
+            Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)),
+                $"mask={mask}: Evaluate must return the value specified in the truth table.");
         }
     }
 
+    /// <summary>
+    /// Verifies that MTBDD reduction eliminates equal-children nodes and interns terminal values.
+    /// </summary>
+    /// <remarks>
+    /// Confirms the Low==High reduction rule reduces a constant function to a single terminal
+    /// and that Constant returns the same canonical handle.
+    /// </remarks>
     [TestMethod]
     public void Canonicalization_ReducesEqualChildrenAndInternsTerminals()
     {
-        // Purpose: Verify MTBDD reduction and terminal interning are observable through handles and statistics.
         // Arrange
         var manager = CreateThreeVariableManager(out var variables);
         var values = new[] { 42, 42, 42, 42, 42, 42, 42, 42 };
@@ -53,10 +66,16 @@ public sealed class MtbddManagerTests
         Assert.AreEqual(1, stats.ReachableTerminalCount);
     }
 
+    /// <summary>
+    /// Verifies that MTBDD typed handles, diagnostics views, statistics, and validation form a coherent public API.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that all structural-inspection APIs return consistent results for the same function
+    /// and that the Validate method accepts a correct diagram without throwing.
+    /// </remarks>
     [TestMethod]
     public void Handles_NodeViews_Statistics_AndValidation_Work()
     {
-        // Purpose: Verify MTBDD typed handles, diagnostics views, statistics, and validation form a coherent public API.
         // Arrange
         var manager = CreateThreeVariableManager(out _);
         var values = new[] { 0, 1, 2, 3, 0, 1, 2, 3 };
@@ -90,17 +109,22 @@ public sealed class MtbddManagerTests
         Assert.AreEqual(first.HighNodeId, copy.HighNodeId);
     }
 
+    /// <summary>
+    /// Verifies that MTBDD rejects malformed truth tables, assignments, variables, and cross-manager handles.
+    /// </summary>
+    /// <remarks>
+    /// Guards all API contract violations so callers receive actionable exceptions rather than silent failures.
+    /// </remarks>
     [TestMethod]
     public void InvalidInputsAndManagerMismatch_ThrowActionableExceptions()
     {
-        // Purpose: Verify MTBDD rejects malformed truth tables, assignments, variables, and cross-manager handles.
         // Arrange
         var left = CreateThreeVariableManager(out var variables);
         var right = CreateThreeVariableManager(out _);
         var leftFunction = left.Create(new[] { 1, 2, 3, 4, 5, 6, 7, 8 });
         var rightFunction = right.Constant(1);
 
-        // Act and Assert
+        // Act / Assert
         Assert.Throws<ArgumentNullException>(() => left.GetOrAddVariable(null!));
         Assert.Throws<ArgumentNullException>(() => left.Create(null!));
         Assert.Throws<ArgumentException>(() => left.Create(new[] { 1, 2, 3 }));
@@ -113,46 +137,59 @@ public sealed class MtbddManagerTests
         Assert.Throws<ArgumentException>(() => left.GetTerminalValueByNodeId(GetNodeId(leftFunction)));
     }
 
+    /// <summary>
+    /// Verifies that MTBDD enforces node limits and catches corrupted internal invariants during validation.
+    /// </summary>
+    /// <remarks>
+    /// Confirms DiagramSizeLimitExceededException fires before memory is exhausted, and that Validate
+    /// detects equal-children nodes, out-of-range references, ordering violations, and unique-table corruption.
+    /// </remarks>
     [TestMethod]
     public void SizeLimitAndCorruptedStateValidation_Throw()
     {
-        // Purpose: Verify MTBDD enforces node limits and catches corrupted internal invariants during validation.
-        // Arrange
+        // Arrange / Act / Assert — size limit
         var limited = new MtbddManager(new DecisionDiagramOptions { MaxNodeCount = 0 });
         limited.GetOrAddVariable("A");
-
-        // Act and Assert
         Assert.Throws<DiagramSizeLimitExceededException>(() => limited.Create(new[] { 0, 1 }));
 
+        // Arrange / Act / Assert — equal children
         var equalChildren = CreateThreeVariableManager(out var variables);
         _ = equalChildren.Create(new[] { 0, 1, 2, 3, 0, 1, 2, 3 });
         SetNode(equalChildren, 0, CreateNode(variables[0].Value, -1, -1));
         Assert.Throws<DiagramException>(() => equalChildren.Validate());
 
+        // Arrange / Act / Assert — out-of-range child
         var outOfRange = CreateThreeVariableManager(out var outOfRangeVariables);
         _ = outOfRange.Create(new[] { 0, 1, 2, 3, 0, 1, 2, 3 });
         SetNode(outOfRange, 0, CreateNode(outOfRangeVariables[0].Value, -999, -1));
         Assert.Throws<DiagramException>(() => outOfRange.Validate());
 
+        // Arrange / Act / Assert — variable ordering violation
         var ordering = CreateThreeVariableManager(out var orderingVariables);
         _ = ordering.Create(new[] { 0, 1, 2, 3, 0, 1, 2, 3 });
         SetNode(ordering, 0, CreateNode(orderingVariables[1].Value, 1, -1));
         Assert.Throws<InvalidVariableOrderingException>(() => ordering.Validate());
 
+        // Arrange / Act / Assert — unique table cleared
         var unique = CreateThreeVariableManager(out _);
         _ = unique.Create(new[] { 0, 1, 2, 3, 0, 1, 2, 3 });
-        ((IDictionary)GetPrivateField(unique, "_uniqueTable")).Clear();
+        ((IDictionary)TestHelpers.GetPrivateField(unique, "_uniqueTable")).Clear();
         Assert.Throws<DiagramException>(() => unique.Validate());
     }
 
+    /// <summary>
+    /// Verifies that MTBDD construction matches naive integer truth tables over many randomized inputs.
+    /// </summary>
+    /// <remarks>
+    /// Provides broad behavioral coverage for Create and Evaluate across 50 randomly generated
+    /// three-variable integer functions; catches systematic errors not visible in targeted tests.
+    /// </remarks>
     [TestMethod]
     public void RandomizedConstruction_MatchesNaiveIntegerTruthTables()
     {
-        // Purpose: Verify MTBDD construction against many small generated integer truth tables.
         // Arrange
         var random = new Random(20260508);
 
-        // Act and Assert
         for (var iteration = 0; iteration < 50; iteration++)
         {
             var manager = CreateThreeVariableManager(out var variables);
@@ -162,38 +199,33 @@ public sealed class MtbddManagerTests
                 values[mask] = random.Next(-3, 4);
             }
 
+            // Act
             var function = manager.Create(values);
+
+            // Assert
             for (var mask = 0; mask < values.Length; mask++)
             {
-                Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)));
+                Assert.AreEqual(values[mask], manager.Evaluate(function, BuildAssignment(variables, mask)),
+                    $"iteration={iteration}, mask={mask}: Evaluate must return the truth-table value.");
             }
         }
     }
 
+    /// <summary>
+    /// Verifies that MTBDD private unique-table key implements value equality used by canonicalization.
+    /// </summary>
+    /// <remarks>
+    /// Covers the MtbddKey struct's Equals and GetHashCode methods; incorrect equality would break
+    /// unique-table lookups and produce duplicate canonical nodes.
+    /// </remarks>
     [TestMethod]
     public void PrivateKeyTypes_ObjectEqualsAndHashCode_Work()
     {
-        // Purpose: Verify MTBDD private unique-table keys preserve value equality semantics used by canonicalization.
         // Arrange
         var keyType = typeof(MtbddManager).GetNestedType("MtbddKey", BindingFlags.NonPublic)!;
-        var first = Activator.CreateInstance(
-            keyType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[] { 1, -1, -2 },
-            null)!;
-        var second = Activator.CreateInstance(
-            keyType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[] { 1, -1, -2 },
-            null)!;
-        var third = Activator.CreateInstance(
-            keyType,
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-            null,
-            new object[] { 2, -1, -2 },
-            null)!;
+        var first = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 1, -1, -2 }, null)!;
+        var second = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 1, -1, -2 }, null)!;
+        var third = Activator.CreateInstance(keyType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { 2, -1, -2 }, null)!;
 
         // Act
         var equalsObject = keyType.GetMethod("Equals", new[] { typeof(object) })!;
@@ -203,6 +235,31 @@ public sealed class MtbddManagerTests
         Assert.IsFalse((bool)equalsObject.Invoke(first, new[] { third })!);
         Assert.IsFalse((bool)equalsObject.Invoke(first, new object[] { "not-a-key" })!);
         Assert.AreNotEqual(first.GetHashCode(), third.GetHashCode());
+    }
+
+    /// <summary>
+    /// Verifies that an MTBDD node representing a function that ignores one variable reduces to a smaller structure.
+    /// </summary>
+    /// <remarks>
+    /// Confirms the ROBDD Low==High reduction property for MTBDD: when all truth-table rows for A=false
+    /// equal the corresponding rows for A=true, the A node must be eliminated.
+    /// Truth table: [1, 1, 2, 2] — A has no effect; only B determines the value.
+    /// </remarks>
+    [TestMethod]
+    public void SkippedVariable_ShouldReduceNodeCount()
+    {
+        // Arrange
+        var manager = new MtbddManager();
+        var a = manager.GetOrAddVariable("A");
+        var b = manager.GetOrAddVariable("B");
+
+        // Act — A has no effect: A=false,B=false→1; A=false,B=true→1; A=true,B=false→2; A=true,B=true→2
+        var function = manager.Create(new[] { 1, 1, 2, 2 });
+        var stats = manager.GetStatistics(function);
+
+        // Assert — only the B node should exist; A node must be eliminated
+        Assert.AreEqual(1, stats.ReachableNodeCount,
+            "A must be eliminated by the Low==High reduction rule; only the B node should remain.");
     }
 
     private static MtbddManager CreateThreeVariableManager(out VariableId[] variables)
@@ -219,13 +276,7 @@ public sealed class MtbddManagerTests
 
     private static Dictionary<VariableId, bool> BuildAssignment(IReadOnlyList<VariableId> variables, int mask)
     {
-        var assignment = new Dictionary<VariableId, bool>();
-        for (var i = 0; i < variables.Count; i++)
-        {
-            assignment[variables[i]] = (mask & (1 << i)) != 0;
-        }
-
-        return assignment;
+        return TestHelpers.BuildBoolAssignment(variables, mask);
     }
 
     private static int GetNodeId(Mtbdd value)
@@ -236,7 +287,7 @@ public sealed class MtbddManagerTests
 
     private static void SetNode(MtbddManager manager, int index, object node)
     {
-        var nodes = (IList)GetPrivateField(manager, "_nodes");
+        var nodes = (IList)TestHelpers.GetPrivateField(manager, "_nodes");
         nodes[index] = node;
     }
 
@@ -249,11 +300,5 @@ public sealed class MtbddManagerTests
             null,
             new object[] { variable, low, high },
             null)!;
-    }
-
-    private static object GetPrivateField(object target, string fieldName)
-    {
-        var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!;
-        return field.GetValue(target)!;
     }
 }

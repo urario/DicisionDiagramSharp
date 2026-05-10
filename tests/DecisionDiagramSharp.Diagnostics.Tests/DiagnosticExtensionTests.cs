@@ -7,10 +7,16 @@ namespace DecisionDiagramSharp.Diagnostics.Tests;
 [TestClass]
 public sealed class DiagnosticExtensionTests
 {
+    /// <summary>
+    /// Verifies that BDD diagnostic extension methods build DOT and all table models from an owned handle.
+    /// </summary>
+    /// <remarks>
+    /// Confirms handle-first diagnostics so users do not have to manually pass the owning manager.
+    /// Each extension must return a model with the expected title, confirming delegation to the correct diagnostic.
+    /// </remarks>
     [TestMethod]
     public void BddExtensions_BuildDotAndTablesFromOwnedHandle()
     {
-        // Purpose: verifies handle-first diagnostics so users do not have to manually pass the owning manager.
         // Arrange
         var manager = new BddManager();
         var a = manager.GetOrAddVariable("A");
@@ -32,20 +38,20 @@ public sealed class DiagnosticExtensionTests
         Assert.AreEqual("BDD Statistics", statisticsTable.Title);
     }
 
+    /// <summary>
+    /// Verifies that ZDD diagnostic extension methods build DOT and all table models from an owned handle.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that ZDD diagnostics support the same handle-first workflow as BDD diagnostics.
+    /// </remarks>
     [TestMethod]
     public void ZddExtensions_BuildDotAndTablesFromOwnedHandle()
     {
-        // Purpose: verifies that ZDD diagnostics support the same handle-first workflow as BDD diagnostics.
         // Arrange
         var manager = new ZddManager();
         var a = manager.GetOrAddVariable("A");
         var b = manager.GetOrAddVariable("B");
-        var family = manager.MakeFamily(
-            new[]
-            {
-                new[] { a },
-                new[] { a, b }
-            });
+        var family = manager.MakeFamily(new[] { new[] { a }, new[] { a, b } });
 
         // Act
         var dot = family.ToDot();
@@ -60,10 +66,16 @@ public sealed class DiagnosticExtensionTests
         Assert.AreEqual("ZDD Statistics", statisticsTable.Title);
     }
 
+    /// <summary>
+    /// Verifies that diagnostic extensions reject default (uninitialized) handles with an actionable error.
+    /// </summary>
+    /// <remarks>
+    /// Covers the invalid default-handle edge case; extensions must throw DiagramException
+    /// rather than failing with a NullReferenceException.
+    /// </remarks>
     [TestMethod]
     public void Extensions_RejectDefaultHandlesWithActionableError()
     {
-        // Purpose: covers the invalid default-handle edge case with an explicit error instead of a null-reference failure.
         // Arrange
         var uninitializedBdd = default(Bdd);
         var uninitializedZdd = default(Zdd);
