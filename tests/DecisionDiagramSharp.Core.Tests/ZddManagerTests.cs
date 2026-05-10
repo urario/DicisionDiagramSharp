@@ -313,8 +313,8 @@ public sealed class ZddManagerTests
         var setA = manager.MakeSet(new[] { a });
 
         // Act / Assert
-        Assert.Throws<ArgumentNullException>(() => manager.MakeSet(null!));
-        Assert.Throws<ArgumentNullException>(() => manager.MakeFamily(null!));
+        Assert.Throws<ArgumentNullException>(() => manager.MakeSet((IEnumerable<VariableId>)null!));
+        Assert.Throws<ArgumentNullException>(() => manager.MakeFamily((IEnumerable<IEnumerable<VariableId>>)null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => manager.MakeSet(new[] { new VariableId(999) }));
         Assert.Throws<ArgumentOutOfRangeException>(() => manager.EnumerateSets(setA, new SetEnumerationOptions { MaxSets = 0 }));
     }
@@ -537,5 +537,53 @@ public sealed class ZddManagerTests
             null,
             new object[] { variable, low, high },
             null)!;
+    }
+
+    // ─── String-name helpers (V07) ───────────────────────────────────────────
+
+    /// <summary>
+    /// Verifies that MakeSet(IEnumerable&lt;string&gt;) produces the same ZDD as the VariableId overload.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that the string-name shorthand resolves names via GetOrAddVariable and produces
+    /// the canonical ZDD node identical to the VariableId overload.
+    /// </remarks>
+    [TestMethod]
+    public void MakeSet_StringNames_ShouldReturnEquivalentToVariableIdOverload()
+    {
+        // Arrange
+        var manager = new ZddManager();
+        var a = manager.GetOrAddVariable("A");
+        var b = manager.GetOrAddVariable("B");
+
+        // Act
+        var byId = manager.MakeSet(new[] { a, b });
+        var byName = manager.MakeSet(new[] { "A", "B" });
+
+        // Assert — canonical representation: same set family → same node
+        Assert.AreEqual(byId, byName, "MakeSet(string[]) and MakeSet(VariableId[]) must return the same canonical node.");
+    }
+
+    /// <summary>
+    /// Verifies that MakeFamily(IEnumerable&lt;IEnumerable&lt;string&gt;&gt;) produces the same ZDD as the VariableId overload.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that the string-name shorthand resolves names for multiple sets and produces
+    /// the canonical ZDD family node identical to the VariableId overload.
+    /// </remarks>
+    [TestMethod]
+    public void MakeFamily_StringNames_ShouldReturnEquivalentToVariableIdOverload()
+    {
+        // Arrange
+        var manager = new ZddManager();
+        var a = manager.GetOrAddVariable("A");
+        var b = manager.GetOrAddVariable("B");
+
+        // Act
+        var byId = manager.MakeFamily(new[] { new[] { a }, new[] { a, b } });
+        var byName = manager.MakeFamily(new[] { new[] { "A" }, new[] { "A", "B" } });
+
+        // Assert — canonical representation: same set family → same node
+        Assert.AreEqual(byId, byName, "MakeFamily(string[][]) and MakeFamily(VariableId[][]) must return the same canonical node.");
     }
 }

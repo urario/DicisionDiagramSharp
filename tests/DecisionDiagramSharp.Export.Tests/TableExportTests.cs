@@ -157,6 +157,59 @@ line2
         StringAssert.Contains(AsciiDocTableExporter.Export(table), "|0");
     }
 
+    /// <summary>
+    /// Verifies that MTBDD export extension methods produce non-empty Markdown, CSV, and AsciiDoc output.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that MtbddExportExtensions delegates correctly through MtbddDiagnosticExtensions
+    /// to MtbddDiagnostics, producing formatted value tables for all three export formats.
+    /// </remarks>
+    [TestMethod]
+    public void MtbddExtensions_ExportValueTableInAllFormats()
+    {
+        // Arrange
+        var manager = new MtbddManager();
+        manager.GetOrAddVariable("A");
+        manager.GetOrAddVariable("B");
+        var function = manager.Create(new[] { 10, 20, 30, 40 });
+
+        // Act
+        var markdown = function.ToMarkdownValueTable();
+        var csv = function.ToCsvValueTable();
+        var asciidoc = function.ToAsciiDocValueTable();
+
+        // Assert
+        StringAssert.Contains(markdown, "| A | B | Result |");
+        StringAssert.Contains(csv, "A,B,Result");
+        StringAssert.Contains(asciidoc, "|10");
+    }
+
+    /// <summary>
+    /// Verifies that ZMTBDD export extension methods produce non-empty Markdown, CSV, and AsciiDoc output.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that ZmtbddExportExtensions delegates correctly through ZmtbddDiagnosticExtensions
+    /// to ZmtbddDiagnostics, producing formatted value tables for all three export formats.
+    /// </remarks>
+    [TestMethod]
+    public void ZmtbddExtensions_ExportValueTableInAllFormats()
+    {
+        // Arrange
+        var manager = new ZmtbddManager();
+        manager.GetOrAddVariable("A");
+        var function = manager.Create(new[] { 7, 0 });
+
+        // Act
+        var markdown = function.ToMarkdownValueTable();
+        var csv = function.ToCsvValueTable();
+        var asciidoc = function.ToAsciiDocValueTable();
+
+        // Assert
+        StringAssert.Contains(markdown, "| A | Result |");
+        StringAssert.Contains(csv, "A,Result");
+        StringAssert.Contains(asciidoc, "|7");
+    }
+
     private static TableModel CreateTable()
     {
         return new TableModel(

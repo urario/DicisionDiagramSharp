@@ -103,8 +103,8 @@ public sealed class CoreEdgeTests
         var setA = manager.MakeSet(new[] { a });
 
         // Act / Assert
-        Assert.Throws<ArgumentNullException>(() => manager.MakeSet(null!));
-        Assert.Throws<ArgumentNullException>(() => manager.MakeFamily(null!));
+        Assert.Throws<ArgumentNullException>(() => manager.MakeSet((IEnumerable<VariableId>)null!));
+        Assert.Throws<ArgumentNullException>(() => manager.MakeFamily((IEnumerable<IEnumerable<VariableId>>)null!));
         Assert.Throws<ArgumentOutOfRangeException>(() => manager.MakeSet(new[] { new VariableId(999) }));
         Assert.Throws<ArgumentOutOfRangeException>(() => manager.EnumerateSets(setA, new SetEnumerationOptions { MaxSets = 0 }));
     }

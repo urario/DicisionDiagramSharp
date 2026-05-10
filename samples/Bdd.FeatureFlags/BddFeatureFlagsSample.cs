@@ -3,17 +3,25 @@ using DecisionDiagramSharp;
 using DecisionDiagramSharp.Diagnostics;
 using DecisionDiagramSharp.Export;
 
-var manager = new BddManager();
-var newCheckout = manager.GetOrAddVariable("NewCheckout");
-var betaUser = manager.GetOrAddVariable("BetaUser");
-var killSwitch = manager.GetOrAddVariable("KillSwitch");
+// This sample demonstrates BDD-based feature flag logic.
+// BDD operators (&, |, !) and handle-first extension methods are used
+// instead of raw manager calls, showing the high-level API surface.
 
-var canUseNewCheckout = manager.And(
-    manager.Or(manager.Var(newCheckout), manager.Var(betaUser)),
-    manager.Not(manager.Var(killSwitch)));
+var dd = new DecisionDiagramManager();
 
-Console.WriteLine("Satisfying configurations: " + manager.CountModels(canUseNewCheckout));
+var newCheckout = dd.Bdd.Var("NewCheckout");
+var betaUser    = dd.Bdd.Var("BetaUser");
+var killSwitch  = dd.Bdd.Var("KillSwitch");
+
+// Feature is available when (NewCheckout or BetaUser) and not KillSwitch
+var canUseNewCheckout = (newCheckout | betaUser) & !killSwitch;
+
+Console.WriteLine("Satisfying configurations: " + dd.Bdd.CountModels(canUseNewCheckout));
 Console.WriteLine();
-Console.WriteLine(MarkdownTableExporter.Export(BddDiagnostics.BuildTruthTable(manager, canUseNewCheckout)));
+
+// Export truth table using the extension method API
+Console.WriteLine(canUseNewCheckout.ToMarkdownTruthTable());
 Console.WriteLine();
-Console.WriteLine(BddDiagnostics.ToDot(manager, canUseNewCheckout));
+
+// Export DOT graph
+Console.WriteLine(canUseNewCheckout.ToDot());

@@ -213,6 +213,36 @@ public sealed class BddManager
     }
 
     /// <summary>
+    /// Evaluates a BDD with a string-keyed variable assignment.
+    /// Variable names are resolved to <see cref="VariableId"/> values internally.
+    /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="assignment"/> is null.</exception>
+    /// <exception cref="ArgumentException">A variable name in the BDD path is not found in <paramref name="assignment"/>.</exception>
+    public bool Evaluate(Bdd value, IReadOnlyDictionary<string, bool> assignment)
+    {
+        EnsureOwned(value);
+        if (assignment == null)
+        {
+            throw new ArgumentNullException(nameof(assignment));
+        }
+
+        var nodeId = value.NodeId;
+        while (!IsTerminal(nodeId))
+        {
+            var node = GetNode(nodeId);
+            var variableName = GetVariableName(new VariableId(node.Variable));
+            if (!assignment.TryGetValue(variableName, out var variableValue))
+            {
+                throw new ArgumentException("Assignment does not contain a value for variable " + variableName + ".", nameof(assignment));
+            }
+
+            nodeId = variableValue ? node.High : node.Low;
+        }
+
+        return nodeId == TrueNodeId;
+    }
+
+    /// <summary>
     /// Counts satisfying assignments across all variables registered in this manager.
     /// </summary>
     public long CountModels(Bdd value)

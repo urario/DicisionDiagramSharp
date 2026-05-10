@@ -103,6 +103,40 @@ public sealed class ZddManager
     }
 
     /// <summary>
+    /// Creates a ZDD family containing exactly one set, with members identified by variable name.
+    /// Variable names are resolved via <see cref="GetOrAddVariable"/>.
+    /// </summary>
+    public Zdd MakeSet(IEnumerable<string> names)
+    {
+        if (names == null)
+        {
+            throw new ArgumentNullException(nameof(names));
+        }
+
+        return MakeSet(ResolveNames(names));
+    }
+
+    /// <summary>
+    /// Creates a ZDD family from multiple sets, with members identified by variable name.
+    /// Variable names are resolved via <see cref="GetOrAddVariable"/>.
+    /// </summary>
+    public Zdd MakeFamily(IEnumerable<IEnumerable<string>> sets)
+    {
+        if (sets == null)
+        {
+            throw new ArgumentNullException(nameof(sets));
+        }
+
+        var family = Empty;
+        foreach (var set in sets)
+        {
+            family = Union(family, MakeSet(set));
+        }
+
+        return family;
+    }
+
+    /// <summary>
     /// Returns the union of two ZDD families.
     /// </summary>
     public Zdd Union(Zdd left, Zdd right)
@@ -726,6 +760,14 @@ public sealed class ZddManager
         }
 
         return false;
+    }
+
+    private IEnumerable<VariableId> ResolveNames(IEnumerable<string> names)
+    {
+        foreach (var name in names)
+        {
+            yield return GetOrAddVariable(name);
+        }
     }
 
     private List<int> BuildSortedDistinctIds(IEnumerable<VariableId> set)

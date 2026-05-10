@@ -12,42 +12,36 @@ NuGet packaging is planned before the first packaged preview release.
 
 ```csharp
 using DecisionDiagramSharp;
-using System.Collections.Generic;
+using DecisionDiagramSharp.Export;
 
 var dd = new DecisionDiagramManager();
-var a = dd.Bdd.GetOrAddVariable("A");
-var b = dd.Bdd.GetOrAddVariable("B");
+var a = dd.Bdd.Var("A");
+var b = dd.Bdd.Var("B");
 
-var f = dd.Bdd.Var(a) & !dd.Bdd.Var(b);
+var f = a & !b;
 
 Console.WriteLine(dd.Bdd.CountModels(f));
-Console.WriteLine(dd.Bdd.Evaluate(
-    f,
-    new Dictionary<VariableId, bool>
-    {
-        { a, true },
-        { b, false }
-    }));
+Console.WriteLine(f.ToMarkdownTruthTable());
 ```
 
 ## ZDD Quick Start
 
 ```csharp
 using DecisionDiagramSharp;
+using DecisionDiagramSharp.Export;
 
 var dd = new DecisionDiagramManager();
+
+var family = dd.Zdd.MakeFamily(new[]
+{
+    new[] { "A" },
+    new[] { "A", "B" }
+});
+
 var a = dd.Zdd.GetOrAddVariable("A");
-var b = dd.Zdd.GetOrAddVariable("B");
-
-var family = dd.Zdd.MakeFamily(
-    new[]
-    {
-        new[] { a },
-        new[] { a, b }
-    });
-
 var containingA = dd.Zdd.Containing(family, a);
 Console.WriteLine(dd.Zdd.CountSets(containingA));
+Console.WriteLine(family.ToMarkdownSetFamily());
 ```
 
 ## MTBDD Quick Start
@@ -81,12 +75,12 @@ using System.Collections.Generic;
 var dd = new DecisionDiagramManager();
 var a = dd.Zmtbdd.GetOrAddVariable("A");
 
-// High zero branches are suppressed; true A evaluates to the numeric zero.
+// A=false maps to 7; A=true is suppressed (zero-suppressed means High==zero is removed).
 var sparseScores = dd.Zmtbdd.Create(new[] { 7, 0 });
 
 Console.WriteLine(dd.Zmtbdd.Evaluate(
     sparseScores,
-    new Dictionary<VariableId, bool> { { a, true } }));
+    new Dictionary<VariableId, bool> { { a, false } }));
 ```
 
 ## DOT Example
@@ -105,9 +99,9 @@ using DecisionDiagramSharp.Diagnostics;
 using DecisionDiagramSharp.Export;
 
 var nodeTable = family.ToNodeTable();
-var csv = CsvTableExporter.Export(nodeTable);
-var markdown = family.ToMarkdownSetFamily();
-var asciidoc = AsciiDocTableExporter.Export(nodeTable);
+var csv       = CsvTableExporter.Export(nodeTable);
+var markdown  = family.ToMarkdownSetFamily();
+var asciidoc  = AsciiDocTableExporter.Export(nodeTable);
 ```
 
 ## Samples
@@ -116,6 +110,8 @@ var asciidoc = AsciiDocTableExporter.Export(nodeTable);
 - `samples/Zdd.SetFamilies`
 - `samples/Zdd.FukashigiCounting`
 - `samples/Export.AllFormats`
+- `samples/Mtbdd.Evaluation`
+- `samples/Zmtbdd.SparseEvaluation`
 
 ## Docs
 
@@ -126,12 +122,7 @@ var asciidoc = AsciiDocTableExporter.Export(nodeTable);
 - `docs/api-guides/high-level-api.md`
 - `docs/design/mtbdd-baseline.md`
 - `docs/design/zmtbdd-baseline.md`
-- `docs/v0.1-execution-plan.md`
-- `docs/v0.2-execution-plan.md`
-- `docs/v0.3-execution-plan.md`
-- `docs/v0.4-execution-plan.md`
-- `docs/v0.5-execution-plan.md`
-- `docs/v0.6-execution-plan.md`
+- `docs/design/codeanalysis-boundary.md`
 - `docs/v0.7-execution-plan.md`
 - `docs/concepts/bdd.md`
 - `docs/concepts/zdd.md`

@@ -1,37 +1,33 @@
 using System;
 using DecisionDiagramSharp;
+using DecisionDiagramSharp.Diagnostics;
+using DecisionDiagramSharp.Export;
 
-var manager = new ZddManager();
-var edgeACommon = manager.GetOrAddVariable("A.h -> Common.h");
-var edgeCommonWin = manager.GetOrAddVariable("Common.h -> Windows.h");
-var edgeBLegacy = manager.GetOrAddVariable("B.h -> LegacyBase.h");
-var edgeLegacyWin = manager.GetOrAddVariable("LegacyBase.h -> Windows.h");
+// This sample demonstrates ZDD-based include-path analysis.
+// String-name helpers and handle-first extension methods are used
+// to show the high-level API surface.
 
-var family = manager.MakeFamily(
-    new[]
-    {
-        new[] { edgeACommon, edgeCommonWin },
-        new[] { edgeBLegacy, edgeLegacyWin },
-        new[] { edgeACommon, edgeLegacyWin }
-    });
+var dd = new DecisionDiagramManager();
 
-Console.WriteLine("Total sets: " + manager.CountSets(family));
-var containingCommon = manager.Containing(family, edgeCommonWin);
-Console.WriteLine("Sets containing Common.h -> Windows.h: " + manager.CountSets(containingCommon));
-
-var sets = manager.EnumerateSets(family);
-for (var i = 0; i < sets.Count; i++)
+// Each include edge is modelled as a ZDD variable (an element of the set).
+// A set in the ZDD family represents one include path.
+var family = dd.Zdd.MakeFamily(new[]
 {
-    Console.Write("- { ");
-    for (var j = 0; j < sets[i].Count; j++)
-    {
-        if (j > 0)
-        {
-            Console.Write(", ");
-        }
+    new[] { "A.h -> Common.h", "Common.h -> Windows.h" },
+    new[] { "B.h -> LegacyBase.h", "LegacyBase.h -> Windows.h" },
+    new[] { "A.h -> Common.h", "LegacyBase.h -> Windows.h" }
+});
 
-        Console.Write(manager.GetVariableName(sets[i][j]));
-    }
+Console.WriteLine("Total paths: " + dd.Zdd.CountSets(family));
 
-    Console.WriteLine(" }");
-}
+var edgeCommonWin = dd.Zdd.GetOrAddVariable("Common.h -> Windows.h");
+var containingCommon = dd.Zdd.Containing(family, edgeCommonWin);
+Console.WriteLine("Paths through Common.h -> Windows.h: " + dd.Zdd.CountSets(containingCommon));
+Console.WriteLine();
+
+// Export set family as Markdown using the extension method API
+Console.WriteLine(family.ToMarkdownSetFamily());
+Console.WriteLine();
+
+// Export DOT graph
+Console.WriteLine(family.ToDot());

@@ -5,6 +5,8 @@
   <Folder Name="/samples/">
     <Project Path="samples/Bdd.FeatureFlags/Bdd.FeatureFlags.csproj" />
     <Project Path="samples/Export.AllFormats/Export.AllFormats.csproj" />
+    <Project Path="samples/Mtbdd.Evaluation/Mtbdd.Evaluation.csproj" />
+    <Project Path="samples/Zmtbdd.SparseEvaluation/Zmtbdd.SparseEvaluation.csproj" />
     <Project Path="samples/Zdd.FukashigiCounting/Zdd.FukashigiCounting.csproj" />
     <Project Path="samples/Zdd.SetFamilies/Zdd.SetFamilies.csproj" />
   </Folder>

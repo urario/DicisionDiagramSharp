@@ -84,4 +84,61 @@ public sealed class DiagnosticExtensionTests
         Assert.Throws<DiagramException>(() => uninitializedBdd.ToDot());
         Assert.Throws<DiagramException>(() => uninitializedZdd.ToDot());
     }
+
+    /// <summary>
+    /// Verifies that MTBDD diagnostic extension methods build DOT and all table models from an owned handle.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that MtbddDiagnosticExtensions delegates correctly to MtbddDiagnostics,
+    /// returning models with expected titles for all four extension methods.
+    /// </remarks>
+    [TestMethod]
+    public void MtbddExtensions_BuildDotAndTablesFromOwnedHandle()
+    {
+        // Arrange
+        var manager = new MtbddManager();
+        var a = manager.GetOrAddVariable("A");
+        var b = manager.GetOrAddVariable("B");
+        var mtbdd = manager.Create(new[] { 10, 20, 30, 40 });
+
+        // Act
+        var dot = mtbdd.ToDot();
+        var nodeTable = mtbdd.ToNodeTable();
+        var valueTable = mtbdd.ToValueTable(new TruthTableOptions { MaxVariables = 2, MaxRows = 4 });
+        var statisticsTable = mtbdd.ToStatisticsTable();
+
+        // Assert
+        StringAssert.Contains(dot, "digraph MTBDD");
+        Assert.AreEqual("MTBDD Node Table", nodeTable.Title);
+        Assert.AreEqual("MTBDD Value Table", valueTable.Title);
+        Assert.AreEqual("MTBDD Statistics", statisticsTable.Title);
+    }
+
+    /// <summary>
+    /// Verifies that ZMTBDD diagnostic extension methods build DOT and all table models from an owned handle.
+    /// </summary>
+    /// <remarks>
+    /// Confirms that ZmtbddDiagnosticExtensions delegates correctly to ZmtbddDiagnostics,
+    /// returning models with expected titles for all four extension methods.
+    /// </remarks>
+    [TestMethod]
+    public void ZmtbddExtensions_BuildDotAndTablesFromOwnedHandle()
+    {
+        // Arrange
+        var manager = new ZmtbddManager();
+        manager.GetOrAddVariable("A");
+        var zmtbdd = manager.Create(new[] { 7, 0 });
+
+        // Act
+        var dot = zmtbdd.ToDot();
+        var nodeTable = zmtbdd.ToNodeTable();
+        var valueTable = zmtbdd.ToValueTable(new TruthTableOptions { MaxVariables = 1, MaxRows = 2 });
+        var statisticsTable = zmtbdd.ToStatisticsTable();
+
+        // Assert
+        StringAssert.Contains(dot, "digraph ZMTBDD");
+        Assert.AreEqual("ZMTBDD Node Table", nodeTable.Title);
+        Assert.AreEqual("ZMTBDD Value Table", valueTable.Title);
+        Assert.AreEqual("ZMTBDD Statistics", statisticsTable.Title);
+    }
 }
